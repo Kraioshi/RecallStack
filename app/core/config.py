@@ -13,5 +13,13 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
+    @property
+    def database_url(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:"
+            f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
+            f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
 
 settings = Settings()
