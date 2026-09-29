@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: recallstack
+      POSTGRES_USER: recallstack
+      POSTGRES_PASSWORD: recallstack
+    ports:
+      - "5432:5432"
