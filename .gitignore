@@ -2,9 +2,15 @@
 .env
 .env-local
 
+*.py[cod]
+
 __pycache__/
 
 .idea/
 .vscode/
 .pytest_cache/
+.mypy_cache/
 .ruff_cache/
+
+.coverage
+htmlcov/
