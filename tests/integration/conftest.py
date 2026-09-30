@@ -1,8 +1,14 @@
 from collections.abc import AsyncGenerator
 
+import pytest
 import pytest_asyncio
 from pydantic_settings import SettingsConfigDict
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.pool import NullPool
 
 from app.core.config import Settings
@@ -87,3 +93,15 @@ async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
                 await transaction.rollback()
 
             await session.close()
+
+
+@pytest.fixture
+def session_factory(
+    engine: AsyncEngine,
+) -> async_sessionmaker[AsyncSession]:
+    """Provide AsyncSession factory bound to the integration test DB."""
+
+    return async_sessionmaker(
+        bind=engine,
+        expire_on_commit=False,
+    )
