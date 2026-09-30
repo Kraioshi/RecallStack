@@ -171,3 +171,123 @@ async def test_add_persists_topic(db_session: AsyncSession) -> None:
     assert persisted_topic.id == result.id
     assert persisted_topic.name == "Python"
     assert persisted_topic.slug == "python"
+
+
+async def test_get_by_slug_returns_root_topic(
+    db_session: AsyncSession,
+) -> None:
+    topic = Topic(
+        name="Python",
+        slug="python",
+    )
+
+    db_session.add(topic)
+    await db_session.flush()
+
+    repository = SQLAlchemyTopicRepository(db_session)
+
+    result = await repository.get_by_slug(
+        slug="python",
+        parent_id=None,
+    )
+
+    assert result is not None
+    assert result.id == topic.id
+    assert result.slug == "python"
+    assert result.parent_id is None
+
+
+async def test_get_by_slug_returns_topic_under_requested_parent(
+    db_session: AsyncSession,
+) -> None:
+    parent = Topic(
+        name="Parent Python",
+        slug="parent-python",
+    )
+
+    db_session.add(parent)
+    await db_session.flush()
+
+    topic = Topic(
+        name="Python",
+        slug="python",
+        parent_id=parent.id,
+    )
+
+    db_session.add(topic)
+    await db_session.flush()
+
+    repository = SQLAlchemyTopicRepository(db_session)
+
+    result = await repository.get_by_slug(
+        slug="python",
+        parent_id=parent.id,
+    )
+
+    assert result is not None
+    assert result.id == topic.id
+    assert result.slug == "python"
+    assert result.parent_id == parent.id
+
+
+async def test_get_by_slug_distinguishes_same_slug_under_different_parents(
+    db_session: AsyncSession,
+) -> None:
+    python_parent = Topic(
+        name="Python",
+        slug="python",
+    )
+    sql_parent = Topic(
+        name="SQL",
+        slug="sql",
+    )
+
+    db_session.add_all([python_parent, sql_parent])
+    await db_session.flush()
+
+    python_basics = Topic(
+        name="Python Basics",
+        slug="basics",
+        parent_id=python_parent.id,
+    )
+    sql_basics = Topic(
+        name="SQL Basics",
+        slug="basics",
+        parent_id=sql_parent.id,
+    )
+
+    db_session.add_all([python_basics, sql_basics])
+    await db_session.flush()
+
+    repository = SQLAlchemyTopicRepository(db_session)
+
+    python_result = await repository.get_by_slug(
+        slug="basics",
+        parent_id=python_parent.id,
+    )
+    sql_result = await repository.get_by_slug(
+        slug="basics",
+        parent_id=sql_parent.id,
+    )
+
+    assert python_result is not None
+    assert sql_result is not None
+
+    assert python_result.id == python_basics.id
+    assert python_result.parent_id == python_parent.id
+
+    assert sql_result.id == sql_basics.id
+    assert sql_result.parent_id == sql_parent.id
+
+
+async def test_get_by_slug_returns_none_when_topic_does_not_exist(
+    db_session: AsyncSession,
+) -> None:
+    repository = SQLAlchemyTopicRepository(db_session)
+
+    result = await repository.get_by_slug(
+        slug="does-not-exist",
+        parent_id=None,
+    )
+
+    assert result is None
