@@ -7,6 +7,14 @@ from app.models.topic import Topic
 
 
 class SQLAlchemyTopicRepository:
+    """
+    SQLAlchemy implementation of TopicRepository.
+
+    Keeps SQLAlchemy-specific database logic out of the service layer.
+    The repository can flush changes, but does NOT commit them.
+    The caller is responsible for the transaction boundary.
+    """
+
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
@@ -27,3 +35,9 @@ class SQLAlchemyTopicRepository:
         result = await self._session.execute(stmt)
 
         return list(result.scalars().all())
+
+    async def add(self, topic: Topic) -> Topic:
+        self._session.add(topic)
+        await self._session.flush()
+
+        return topic

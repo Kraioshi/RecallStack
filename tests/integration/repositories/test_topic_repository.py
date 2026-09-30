@@ -36,22 +36,22 @@ async def test_get_roots_returns_only_root_topics(
     db_session: AsyncSession,
 ) -> None:
     # Arrange
-    python = Topic(
+    python_topic = Topic(
         name="Python",
         slug="python",
     )
-    sql = Topic(
+    sql_topic = Topic(
         name="SQL",
         slug="sql",
     )
 
-    db_session.add_all([python, sql])
+    db_session.add_all([python_topic, sql_topic])
     await db_session.flush()
 
     asyncio_topic = Topic(
         name="Asyncio",
         slug="asyncio",
-        parent_id=python.id,
+        parent_id=python_topic.id,
     )
 
     db_session.add(asyncio_topic)
@@ -64,7 +64,7 @@ async def test_get_roots_returns_only_root_topics(
 
     # Assert
     result_ids = {topic.id for topic in result}
-    assert result_ids == {python.id, sql.id}
+    assert result_ids == {python_topic.id, sql_topic.id}
 
 
 async def test_get_roots_returns_empty_if_no_root_topics(
@@ -80,33 +80,33 @@ async def test_get_children_returns_only_direct_children_of_parent(
     db_session: AsyncSession,
 ) -> None:
     # root topics first
-    python = Topic(
+    python_topic = Topic(
         name="Python",
         slug="python",
     )
-    sql = Topic(
+    sql_topic = Topic(
         name="SQL",
         slug="sql",
     )
 
-    db_session.add_all([python, sql])
+    db_session.add_all([python_topic, sql_topic])
     await db_session.flush()
 
     # Create direct children
     asyncio_topic = Topic(
         name="Asyncio",
         slug="asyncio",
-        parent_id=python.id,
+        parent_id=python_topic.id,
     )
     data_structures = Topic(
         name="Data Structures",
         slug="data-structures",
-        parent_id=python.id,
+        parent_id=python_topic.id,
     )
     joins = Topic(
         name="JOINs",
         slug="joins",
-        parent_id=sql.id,
+        parent_id=sql_topic.id,
     )
 
     db_session.add_all([asyncio_topic, data_structures, joins])
@@ -125,7 +125,7 @@ async def test_get_children_returns_only_direct_children_of_parent(
 
     repository = SQLAlchemyTopicRepository(db_session)
 
-    result = await repository.get_children(python.id)
+    result = await repository.get_children(python_topic.id)
 
     result_ids = {topic.id for topic in result}
 
@@ -133,3 +133,41 @@ async def test_get_children_returns_only_direct_children_of_parent(
         asyncio_topic.id,
         data_structures.id,
     }
+
+
+async def test_get_children_returns_empty_list_when_parent_has_no_children(
+    db_session: AsyncSession,
+) -> None:
+    python_topic = Topic(
+        name="Python",
+        slug="python",
+    )
+
+    db_session.add(python_topic)
+    await db_session.flush()
+
+    repository = SQLAlchemyTopicRepository(db_session)
+
+    result = await repository.get_children(python_topic.id)
+
+    assert result == []
+
+
+async def test_add_persists_topic(db_session: AsyncSession) -> None:
+    python_topic = Topic(
+        name="Python",
+        slug="python",
+    )
+
+    repository = SQLAlchemyTopicRepository(db_session)
+
+    result = await repository.add(python_topic)
+
+    assert result.id is not None
+
+    persisted_topic = await repository.get_by_id(result.id)
+
+    assert persisted_topic is not None
+    assert persisted_topic.id == result.id
+    assert persisted_topic.name == "Python"
+    assert persisted_topic.slug == "python"
