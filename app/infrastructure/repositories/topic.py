@@ -15,3 +15,9 @@ class SQLAlchemyTopicRepository:
         result = await self._session.execute(stmt)
 
         return result.scalar_one_or_none()
+
+    async def get_roots(self) -> list[Topic]:
+        stmt = select(Topic).where(Topic.parent_id.is_(None))
+        result = await self._session.execute(stmt)
+
+        return list(result.scalars().all())
