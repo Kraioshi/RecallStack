@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 import pytest_asyncio
 from pydantic_settings import SettingsConfigDict
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.config import Settings
 from app.database.base import Base
@@ -29,10 +30,11 @@ async def engine() -> AsyncGenerator[AsyncEngine, None]:
     """
     Shared async SQLAlchemy engine for integration tests.
 
-    Engine is created once per session and connects only to test database.
-    Connection pool is disposed after all tests have finished.
+    The engine is created once per test session and connects only to the test database.
+    NullPool prevents asyncpg connections from being reused
+    across async test contexts.
     """
-    engine = create_async_engine(test_settings.database_url)
+    engine = create_async_engine(test_settings.database_url, poolclass=NullPool)
 
     # Create test schema from SQLAlchemy models
     #
@@ -43,7 +45,7 @@ async def engine() -> AsyncGenerator[AsyncEngine, None]:
 
     yield engine
 
-    # Remove test schema and release pooled db connections
+    # Remove test schema and dispose of engine resources.
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.drop_all)
 
@@ -81,5 +83,7 @@ async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         finally:
+            if transaction.is_active:
+                await transaction.rollback()
+
             await session.close()
-            await transaction.rollback()
