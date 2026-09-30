@@ -1,0 +1,17 @@
+from uuid import UUID
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.topic import Topic
+
+
+class SQLAlchemyTopicRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_by_id(self, topic_id: UUID) -> Topic | None:
+        stmt = select(Topic).where(Topic.id == topic_id)
+        result = await self._session.execute(stmt)
+
+        return result.scalar_one_or_none()
