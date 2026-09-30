@@ -21,3 +21,9 @@ class SQLAlchemyTopicRepository:
         result = await self._session.execute(stmt)
 
         return list(result.scalars().all())
+
+    async def get_children(self, parent_id: UUID) -> list[Topic]:
+        stmt = select(Topic).where(Topic.parent_id == parent_id)
+        result = await self._session.execute(stmt)
+
+        return list(result.scalars().all())
