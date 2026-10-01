@@ -2,8 +2,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.core.dto.topic import TopicData
-from app.core.exceptions.topic import TopicNotFoundError
+from app.core.dto.topic import CreateTopicData, TopicData
+from app.core.exceptions.topic import TopicNotFoundError, TopicSlugAlreadyExistsError
 from app.core.helpers.dates import now
 from app.models.topic import Topic
 from tests.unit.factories import make_topic
@@ -158,3 +158,164 @@ class TestListChildren:
             await service.list_children(missing_parent_id)
 
         assert exc_info.value.topic_id == missing_parent_id
+
+
+class TestCreateTopic:
+    async def test_creates_root_topic(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        service, uow = topic_service_factory()
+
+        data = CreateTopicData(
+            name="Python",
+            slug="python",
+            description="Python topics",
+        )
+
+        result = await service.create_topic(data)
+
+        assert isinstance(result, TopicData)
+        assert result.id is not None
+        assert result.name == "Python"
+        assert result.slug == "python"
+        assert result.description == "Python topics"
+        assert result.parent_id is None
+        assert result.created_at is not None
+        assert result.updated_at is not None
+
+        assert uow.committed is True
+
+    async def test_creates_child_topic_under_existing_parent(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        parent = make_topic(
+            name="Python",
+            slug="python",
+        )
+
+        service, uow = topic_service_factory([parent])
+
+        data = CreateTopicData(
+            name="Asyncio",
+            slug="asyncio",
+            description=None,
+            parent_id=parent.id,
+        )
+
+        result = await service.create_topic(data)
+
+        assert result.name == "Asyncio"
+        assert result.slug == "asyncio"
+        assert result.parent_id == parent.id
+
+        assert uow.committed is True
+
+    async def test_raises_when_parent_does_not_exist(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        missing_parent_id = uuid4()
+
+        service, uow = topic_service_factory()
+
+        data = CreateTopicData(
+            name="Asyncio",
+            slug="asyncio",
+            description=None,
+            parent_id=missing_parent_id,
+        )
+
+        with pytest.raises(TopicNotFoundError) as exc_info:
+            await service.create_topic(data)
+
+        assert exc_info.value.topic_id == missing_parent_id
+        assert uow.committed is False
+
+    async def test_raises_when_root_slug_already_exists(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        existing = make_topic(
+            name="Python",
+            slug="python",
+        )
+
+        service, uow = topic_service_factory([existing])
+
+        data = CreateTopicData(
+            name="Another Python",
+            slug="python",
+            description=None,
+        )
+
+        with pytest.raises(TopicSlugAlreadyExistsError) as exc_info:
+            await service.create_topic(data)
+
+        assert exc_info.value.slug == "python"
+        assert exc_info.value.parent_id is None
+        assert uow.committed is False
+
+    async def test_raises_when_sibling_slug_already_exists(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        parent = make_topic(
+            name="Python",
+            slug="python",
+        )
+        existing_child = make_topic(
+            name="Python Basics",
+            slug="basics",
+            parent_id=parent.id,
+        )
+
+        service, uow = topic_service_factory([parent, existing_child])
+
+        data = CreateTopicData(
+            name="Other Basics",
+            slug="basics",
+            description=None,
+            parent_id=parent.id,
+        )
+
+        with pytest.raises(TopicSlugAlreadyExistsError) as exc_info:
+            await service.create_topic(data)
+
+        assert exc_info.value.slug == "basics"
+        assert exc_info.value.parent_id == parent.id
+        assert uow.committed is False
+
+    async def test_allows_same_slug_under_different_parent(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        python = make_topic(
+            name="Python",
+            slug="python",
+        )
+        sql = make_topic(
+            name="SQL",
+            slug="sql",
+        )
+        python_basics = make_topic(
+            name="Python Basics",
+            slug="basics",
+            parent_id=python.id,
+        )
+
+        service, uow = topic_service_factory([python, sql, python_basics])
+
+        data = CreateTopicData(
+            name="SQL Basics",
+            slug="basics",
+            description=None,
+            parent_id=sql.id,
+        )
+
+        result = await service.create_topic(data)
+
+        assert result.slug == "basics"
+        assert result.parent_id == sql.id
+        assert uow.committed is True

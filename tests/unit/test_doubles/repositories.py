@@ -1,5 +1,6 @@
 from uuid import UUID, uuid4
 
+from app.core.helpers.dates import now
 from app.models.topic import Topic
 
 
@@ -38,10 +39,17 @@ class FakeTopicRepository:
         )
 
     async def add(self, topic: Topic) -> Topic:
-        # postgres normally generates the ID during flush().
-        # The fake has no database, so it has to simulate that behavior.
+        # PostgreSQL normally populates database-generated fields during flush().
+        # The fake has no database, so it simulates the values the service relies on.
+        timestamp = now()
         if topic.id is None:
             topic.id = uuid4()
+
+        if topic.created_at is None:
+            topic.created_at = timestamp
+
+        if topic.updated_at is None:
+            topic.updated_at = timestamp
 
         self._topics.append(topic)
 

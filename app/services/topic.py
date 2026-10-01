@@ -83,8 +83,6 @@ class TopicService:
                 parent_id=data.parent_id,
             )
 
-
-
     @staticmethod
     def _to_topic_data(topic: Topic) -> TopicData:
         return TopicData(
