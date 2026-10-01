@@ -10,6 +10,7 @@ def make_topic(
     slug: str = "python",
     topic_id: UUID | None = None,
     parent_id: UUID | None = None,
+    description: str | None = None,
 ) -> Topic:
     current_time = now()
 
@@ -18,6 +19,7 @@ def make_topic(
         name=name,
         slug=slug,
         parent_id=parent_id,
+        description=description,
         created_at=current_time,
         updated_at=current_time,
     )
