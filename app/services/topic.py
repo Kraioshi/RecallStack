@@ -28,6 +28,22 @@ class TopicService:
             roots = await self._uow.topics.get_roots()
             return [self._to_topic_data(root) for root in roots]
 
+    async def list_children(
+        self,
+        parent_id: UUID,
+    ) -> list[TopicData]:
+        """Return direct children of a topic or raise if the parent does not exist."""
+
+        async with self._uow:
+            parent = await self._uow.topics.get_by_id(parent_id)
+
+            if parent is None:
+                raise TopicNotFoundError(parent_id)
+
+            children = await self._uow.topics.get_children(parent_id)
+
+            return [self._to_topic_data(child) for child in children]
+
     @staticmethod
     def _to_topic_data(topic: Topic) -> TopicData:
         return TopicData(

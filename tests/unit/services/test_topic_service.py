@@ -102,3 +102,59 @@ class TestListRootTopics:
         result = await service.list_root_topics()
 
         assert result == []
+
+
+class TestListChildren:
+    async def test_returns_only_direct_children(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        python = make_topic(
+            name="Python",
+            slug="python",
+        )
+        sql = make_topic(
+            name="SQL",
+            slug="sql",
+        )
+        asyncio_topic = make_topic(
+            name="Asyncio",
+            slug="asyncio",
+            parent_id=python.id,
+        )
+        sql_joins = make_topic(
+            name="JOINs",
+            slug="joins",
+            parent_id=sql.id,
+        )
+
+        service, _ = topic_service_factory([python, sql, asyncio_topic, sql_joins])
+
+        result = await service.list_children(python.id)
+
+        assert {topic.id for topic in result} == {asyncio_topic.id}
+
+    async def test_returns_empty_list_when_parent_has_no_children(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        python = make_topic(
+            name="Python",
+            slug="python",
+        )
+        service, _ = topic_service_factory([python])
+
+        result = await service.list_children(python.id)
+        assert result == []
+
+    async def test_raises_when_parent_does_not_exist(
+        self, topic_service_factory: TopicServiceFactory
+    ) -> None:
+        missing_parent_id = uuid4()
+
+        service, _ = topic_service_factory()
+
+        with pytest.raises(TopicNotFoundError) as exc_info:
+            await service.list_children(missing_parent_id)
+
+        assert exc_info.value.topic_id == missing_parent_id
