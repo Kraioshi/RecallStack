@@ -3,7 +3,11 @@ from uuid import uuid4
 import pytest
 
 from app.core.dto.topic import CreateTopicData, TopicData, UpdateTopicData
-from app.core.exceptions.topic import TopicNotFoundError, TopicSlugAlreadyExistsError
+from app.core.exceptions.topic import (
+    TopicHasChildrenError,
+    TopicNotFoundError,
+    TopicSlugAlreadyExistsError,
+)
 from app.core.helpers.dates import now
 from app.models.topic import Topic
 from tests.unit.factories import make_topic
@@ -480,3 +484,59 @@ class TestUpdateTopic:
         assert result.parent_id == sql.id
 
         assert uow.committed is True
+
+
+class TestDeleteTopic:
+    async def test_deletes_leaf_topic(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        topic = make_topic(
+            name="Python",
+            slug="python",
+        )
+
+        service, uow = topic_service_factory([topic])
+
+        await service.delete_topic(topic.id)
+
+        assert await uow.topics.get_by_id(topic.id) is None
+        assert uow.committed is True
+
+    async def test_raises_when_topic_does_not_exist(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        missing_topic_id = uuid4()
+
+        service, uow = topic_service_factory()
+
+        with pytest.raises(TopicNotFoundError) as exc_info:
+            await service.delete_topic(missing_topic_id)
+
+        assert exc_info.value.topic_id == missing_topic_id
+        assert uow.committed is False
+
+    async def test_raises_when_topic_has_children(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        parent = make_topic(
+            name="Python",
+            slug="python",
+        )
+        child = make_topic(
+            name="Asyncio",
+            slug="asyncio",
+            parent_id=parent.id,
+        )
+
+        service, uow = topic_service_factory([parent, child])
+
+        with pytest.raises(TopicHasChildrenError) as exc_info:
+            await service.delete_topic(parent.id)
+
+        assert exc_info.value.topic_id == parent.id
+        assert await uow.topics.get_by_id(parent.id) is not None
+        assert await uow.topics.get_by_id(child.id) is not None
+        assert uow.committed is False

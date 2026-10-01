@@ -54,3 +54,6 @@ class FakeTopicRepository:
         self._topics.append(topic)
 
         return topic
+
+    async def delete(self, topic: Topic) -> None:
+        self._topics.remove(topic)

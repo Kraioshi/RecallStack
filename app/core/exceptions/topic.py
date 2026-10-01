@@ -25,3 +25,14 @@ class TopicSlugAlreadyExistsError(Exception):
         )
 
         super().__init__(f"Topic with slug '{slug}' already exists {scope}.")
+
+
+class TopicHasChildrenError(Exception):
+    """Raised when attempting to delete a topic that still has children."""
+
+    def __init__(self, topic_id: UUID) -> None:
+        self.topic_id = topic_id
+
+        super().__init__(
+            f"Topic '{topic_id}' cannot be deleted while it has child topics."
+        )

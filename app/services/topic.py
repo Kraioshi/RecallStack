@@ -1,7 +1,11 @@
 from uuid import UUID
 
 from app.core.dto.topic import CreateTopicData, TopicData, UpdateTopicData
-from app.core.exceptions.topic import TopicNotFoundError, TopicSlugAlreadyExistsError
+from app.core.exceptions.topic import (
+    TopicHasChildrenError,
+    TopicNotFoundError,
+    TopicSlugAlreadyExistsError,
+)
 from app.core.types import UNSET
 from app.models.topic import Topic
 from app.unit_of_work.base import UnitOfWork
@@ -77,6 +81,21 @@ class TopicService:
             await self._uow.commit()
 
             return self._to_topic_data(topic)
+
+    async def delete_topic(self, topic_id: UUID):
+        """Delete a left topic or raise if it can't be deleted (topic has children)."""
+
+        async with self._uow:
+            topic = await self._get_topic_or_raise(topic_id)
+
+            children = await self._uow.topics.get_children(topic_id)
+
+            if children:
+                raise TopicHasChildrenError(topic_id)
+
+            await self._uow.topics.delete(topic)
+
+            await self._uow.commit()
 
     async def _get_topic_or_raise(
         self,
