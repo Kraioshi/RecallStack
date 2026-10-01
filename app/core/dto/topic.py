@@ -9,6 +9,7 @@ class CreateTopicData:
 
     name: str
     slug: str
+    description: str | None = None
     parent_id: UUID | None = None
 
 
