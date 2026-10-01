@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from app.core.types import UNSET, _UnsetType
+
 
 @dataclass(frozen=True, slots=True)
 class CreateTopicData:
@@ -11,6 +13,15 @@ class CreateTopicData:
     slug: str
     description: str | None = None
     parent_id: UUID | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class UpdateTopicData:
+    """Application input for updating a topic."""
+
+    name: str | _UnsetType = UNSET
+    slug: str | _UnsetType = UNSET
+    description: str | None | _UnsetType = UNSET
 
 
 @dataclass(frozen=True, slots=True)

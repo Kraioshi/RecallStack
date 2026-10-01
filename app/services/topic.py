@@ -1,7 +1,8 @@
 from uuid import UUID
 
-from app.core.dto.topic import CreateTopicData, TopicData
+from app.core.dto.topic import CreateTopicData, TopicData, UpdateTopicData
 from app.core.exceptions.topic import TopicNotFoundError, TopicSlugAlreadyExistsError
+from app.core.types import UNSET
 from app.models.topic import Topic
 from app.unit_of_work.base import UnitOfWork
 
@@ -44,7 +45,9 @@ class TopicService:
 
         async with self._uow:
             await self._ensure_parent_exists(data)
-            await self._ensure_sibling_slug_is_available(data)
+            await self._ensure_sibling_slug_is_available(
+                slug=data.slug, parent_id=data.parent_id
+            )
 
             entity = self._to_topic_model(data)
             created = await self._uow.topics.add(entity)
@@ -52,6 +55,28 @@ class TopicService:
             await self._uow.commit()
 
             return self._to_topic_data(created)
+
+    async def update_topic(
+        self,
+        topic_id: UUID,
+        data: UpdateTopicData,
+    ) -> TopicData:
+        """Update a topic or raise if it doesn't exist."""
+
+        async with self._uow:
+            topic = await self._get_topic_or_raise(topic_id)
+
+            if data.slug is not UNSET and data.slug != topic.slug:
+                await self._ensure_sibling_slug_is_available(
+                    slug=data.slug,
+                    parent_id=topic.parent_id,
+                )
+
+            self._apply_updates(topic, data)
+
+            await self._uow.commit()
+
+            return self._to_topic_data(topic)
 
     async def _get_topic_or_raise(
         self,
@@ -70,18 +95,33 @@ class TopicService:
 
     async def _ensure_sibling_slug_is_available(
         self,
-        data: CreateTopicData,
+        slug: str,
+        parent_id: UUID | None,
     ) -> None:
         existing = await self._uow.topics.get_by_slug(
-            slug=data.slug,
-            parent_id=data.parent_id,
+            slug=slug,
+            parent_id=parent_id,
         )
 
         if existing is not None:
             raise TopicSlugAlreadyExistsError(
-                slug=data.slug,
-                parent_id=data.parent_id,
+                slug=slug,
+                parent_id=parent_id,
             )
+
+    @staticmethod
+    def _apply_updates(
+        topic: Topic,
+        data: UpdateTopicData,
+    ) -> None:
+        if data.name is not UNSET:
+            topic.name = data.name
+
+        if data.slug is not UNSET:
+            topic.slug = data.slug
+
+        if data.description is not UNSET:
+            topic.description = data.description
 
     @staticmethod
     def _to_topic_data(topic: Topic) -> TopicData:
