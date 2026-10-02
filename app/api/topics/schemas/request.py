@@ -26,7 +26,7 @@ class UpdateTopicRequest(BaseModel):
     description: str | None = None
 
     @model_validator(mode="after")
-    def validate_nullable_fields(self) -> "UpdateTopicRequest":
+    def validate_update_fields(self) -> "UpdateTopicRequest":
         """
         Reject explicit nulls for non-nullable update fields.
 
@@ -40,6 +40,9 @@ class UpdateTopicRequest(BaseModel):
         Without checking `model_fields_set`, both cases would result in
         `self.name is None` and could not be distinguished.
         """
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
+
         if "name" in self.model_fields_set and self.name is None:
             raise ValueError("name cannot be null")
 

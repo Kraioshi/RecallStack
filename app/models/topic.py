@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, Uuid, func
+from sqlalchemy import DateTime, FetchedValue, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -9,6 +9,10 @@ from app.database.base import Base
 
 class Topic(Base):
     __tablename__ = "topics"
+
+    __mapper_args__ = {
+        "eager_defaults": True,
+    }
 
     id: Mapped[UUID] = mapped_column(
         Uuid,
@@ -44,6 +48,7 @@ class Topic(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
+        server_onupdate=FetchedValue(),
     )
 
     # Topic can point to another topic as its parent

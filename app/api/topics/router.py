@@ -6,7 +6,7 @@ from app.api.dependencies.services import TopicServiceDep
 # without adding a stateless class.
 from app.api.topics import mappers as topic_mapper
 from app.api.topics.params import TopicIdPath
-from app.api.topics.schemas.request import CreateTopicRequest
+from app.api.topics.schemas.request import CreateTopicRequest, UpdateTopicRequest
 from app.api.topics.schemas.response import TopicResponse
 
 router = APIRouter(
@@ -115,3 +115,30 @@ async def list_topic_children(
     topics = await service.list_children(topic_id)
 
     return topic_mapper.to_topic_responses(topics)
+
+
+@router.patch(
+    "/{topic_id}",
+    response_model=TopicResponse,
+    summary="Update a topic",
+    response_description="The updated topic.",
+    responses={
+        404: {
+            "description": "Topic not found.",
+        },
+        409: {
+            "description": "A topic with this slug already exists under same parent.",
+        },
+    },
+)
+async def update_topic(
+    topic_id: TopicIdPath,
+    request: UpdateTopicRequest,
+    service: TopicServiceDep,
+) -> TopicResponse:
+    """Partially update an existing topic."""
+    data = topic_mapper.to_update_topic_data(request)
+
+    topic = await service.update_topic(topic_id, data)
+
+    return topic_mapper.to_topic_response(topic)
