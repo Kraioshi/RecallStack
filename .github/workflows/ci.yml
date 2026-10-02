@@ -9,6 +9,31 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    env:
+      POSTGRES_DB: recallstack_test
+      POSTGRES_USER: recallstack
+      POSTGRES_PASSWORD: recallstack
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+
+    services:
+      postgres:
+        image: postgres:17
+
+        env:
+          POSTGRES_DB: recallstack_test
+          POSTGRES_USER: recallstack
+          POSTGRES_PASSWORD: recallstack
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U recallstack -d recallstack_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -34,3 +59,6 @@ jobs:
 
       - name: Mypy check
         run: uv run mypy .
+
+      - name: Run tests
+        run: uv run pytest
