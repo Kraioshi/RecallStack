@@ -82,8 +82,8 @@ class TopicService:
 
             return self._to_topic_data(topic)
 
-    async def delete_topic(self, topic_id: UUID):
-        """Delete a left topic or raise if it can't be deleted (topic has children)."""
+    async def delete_topic(self, topic_id: UUID) -> None:
+        """Delete a leaf topic or raise if it can't be deleted (topic has children)."""
 
         async with self._uow:
             topic = await self._get_topic_or_raise(topic_id)

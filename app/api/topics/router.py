@@ -70,3 +70,24 @@ async def create_topic(
     topic = await service.create_topic(data)
 
     return topic_mapper.to_topic_response(topic)
+
+
+@router.delete(
+    "/{topic_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a topic",
+    response_description="Topic deleted successfully.",
+    responses={
+        404: {
+            "description": "Topic not found.",
+        },
+        409: {
+            "description": "Topic has children and cannot be deleted.",
+        },
+    },
+)
+async def delete_topic(
+    topic_id: UUID,
+    service: TopicServiceDep,
+) -> None:
+    await service.delete_topic(topic_id)

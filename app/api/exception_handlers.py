@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from app.core.exceptions.topic import TopicNotFoundError
+from app.core.exceptions.topic import TopicHasChildrenError, TopicNotFoundError
 
 
 async def handle_topic_not_found(
@@ -23,8 +23,23 @@ async def handle_topic_not_found(
     )
 
 
+async def handle_topic_has_children(
+    _request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """Translate TopicHasChildrenError into an HTTP 409 response."""
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "detail": str(exc),
+        },
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         TopicNotFoundError,
         handle_topic_not_found,
     )
+
+    app.add_exception_handler(TopicHasChildrenError, handle_topic_has_children)
