@@ -60,5 +60,13 @@ jobs:
       - name: Mypy check
         run: uv run mypy .
 
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+
+      # Fails if Alembic detects schema changes in the models
+      # that are not represented by the committed migrations.
+      - name: Check migrations are up to date
+        run: uv run alembic check
+
       - name: Run tests
         run: uv run pytest
