@@ -51,7 +51,7 @@ def to_update_topic_data(
     fields = request.model_fields_set
 
     return UpdateTopicData(
-        name=request.name if "name" in fields else UNSET,
-        slug=request.slug if "slug" in fields else UNSET,
+        name=request.name if request.name is not None else UNSET,
+        slug=request.slug if request.slug is not None else UNSET,
         description=request.description if "description" in fields else UNSET,
     )

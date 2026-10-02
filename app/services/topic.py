@@ -6,7 +6,7 @@ from app.core.exceptions.topic import (
     TopicNotFoundError,
     TopicSlugAlreadyExistsError,
 )
-from app.core.types import UNSET
+from app.core.types import is_set
 from app.models.topic import Topic
 from app.unit_of_work.base import UnitOfWork
 
@@ -70,9 +70,10 @@ class TopicService:
         async with self._uow:
             topic = await self._get_topic_or_raise(topic_id)
 
-            if data.slug is not UNSET and data.slug != topic.slug:
+            slug = data.slug
+            if is_set(slug) and slug != topic.slug:
                 await self._ensure_sibling_slug_is_available(
-                    slug=data.slug,
+                    slug=slug,
                     parent_id=topic.parent_id,
                 )
 
@@ -133,14 +134,17 @@ class TopicService:
         topic: Topic,
         data: UpdateTopicData,
     ) -> None:
-        if data.name is not UNSET:
-            topic.name = data.name
+        name = data.name
+        if is_set(name):
+            topic.name = name
 
-        if data.slug is not UNSET:
-            topic.slug = data.slug
+        slug = data.slug
+        if is_set(slug):
+            topic.slug = slug
 
-        if data.description is not UNSET:
-            topic.description = data.description
+        description = data.description
+        if is_set(description):
+            topic.description = description
 
     @staticmethod
     def _to_topic_data(topic: Topic) -> TopicData:
