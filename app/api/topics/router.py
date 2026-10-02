@@ -1,14 +1,11 @@
-from typing import Annotated
-from uuid import UUID
-
-from fastapi import APIRouter, Path
-from starlette import status
+from fastapi import APIRouter, status
 
 from app.api.dependencies.services import TopicServiceDep
 
 # Import mapper module as a namespace to keep mapping calls explicit
-# without adding a stateless class
+# without adding a stateless class.
 from app.api.topics import mappers as topic_mapper
+from app.api.topics.params import TopicIdPath
 from app.api.topics.schemas.request import CreateTopicRequest
 from app.api.topics.schemas.response import TopicResponse
 
@@ -23,7 +20,6 @@ router = APIRouter(
     response_model=TopicResponse,
     summary="Get a topic",
     response_description="The requested topic.",
-    operation_id="get_topic",
     responses={
         404: {
             "description": "Topic not found.",
@@ -31,17 +27,10 @@ router = APIRouter(
     },
 )
 async def get_topic(
-    topic_id: Annotated[
-        UUID,
-        Path(
-            description="Unique identifier of the topic.",
-        ),
-    ],
+    topic_id: TopicIdPath,
     service: TopicServiceDep,
 ) -> TopicResponse:
-    """
-    Retrieve a single topic by its unique identifier.
-    """
+    """Retrieve a single topic by its unique identifier."""
     topic = await service.get_topic(topic_id)
 
     return topic_mapper.to_topic_response(topic)
@@ -76,7 +65,6 @@ async def create_topic(
     "/{topic_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a topic",
-    response_description="Topic deleted successfully.",
     responses={
         404: {
             "description": "Topic not found.",
@@ -87,7 +75,7 @@ async def create_topic(
     },
 )
 async def delete_topic(
-    topic_id: UUID,
+    topic_id: TopicIdPath,
     service: TopicServiceDep,
 ) -> None:
     await service.delete_topic(topic_id)
@@ -120,12 +108,7 @@ async def list_root_topics(
     },
 )
 async def list_topic_children(
-    topic_id: Annotated[
-        UUID,
-        Path(
-            description="Unique identifier of the parent topic.",
-        ),
-    ],
+    topic_id: TopicIdPath,
     service: TopicServiceDep,
 ) -> list[TopicResponse]:
     """Retrieve the direct children of a topic."""
