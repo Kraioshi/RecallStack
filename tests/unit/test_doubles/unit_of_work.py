@@ -1,6 +1,7 @@
 from types import TracebackType
 from typing import Self
 
+from app.repositories.topic import TopicRepository
 from tests.unit.test_doubles.repositories import FakeTopicRepository
 
 
@@ -12,7 +13,7 @@ class FakeUnitOfWork:
     """
 
     def __init__(self, topics: FakeTopicRepository) -> None:
-        self.topics = topics
+        self.topics: TopicRepository = topics
 
         self.committed = False
         self.rolled_back = False
