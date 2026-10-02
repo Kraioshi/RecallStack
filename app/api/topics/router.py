@@ -91,3 +91,44 @@ async def delete_topic(
     service: TopicServiceDep,
 ) -> None:
     await service.delete_topic(topic_id)
+
+
+@router.get(
+    "",
+    response_model=list[TopicResponse],
+    summary="List root topics",
+    response_description="The root-level topics.",
+)
+async def list_root_topics(
+    service: TopicServiceDep,
+) -> list[TopicResponse]:
+    """Retrieve all root-level topics."""
+    topics = await service.list_root_topics()
+
+    return topic_mapper.to_topic_responses(topics)
+
+
+@router.get(
+    "/{topic_id}/children",
+    response_model=list[TopicResponse],
+    summary="List topic children",
+    response_description="The direct child topics.",
+    responses={
+        404: {
+            "description": "Parent topic not found.",
+        },
+    },
+)
+async def list_topic_children(
+    topic_id: Annotated[
+        UUID,
+        Path(
+            description="Unique identifier of the parent topic.",
+        ),
+    ],
+    service: TopicServiceDep,
+) -> list[TopicResponse]:
+    """Retrieve the direct children of a topic."""
+    topics = await service.list_children(topic_id)
+
+    return topic_mapper.to_topic_responses(topics)

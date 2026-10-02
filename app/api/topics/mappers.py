@@ -34,3 +34,10 @@ def to_topic_response(
 ) -> TopicResponse:
     """Map application topic data to the public API response schema."""
     return TopicResponse.model_validate(data)
+
+
+def to_topic_responses(
+    data: list[TopicData],
+) -> list[TopicResponse]:
+    """Map application topic data to public API response schemas."""
+    return [to_topic_response(topic) for topic in data]
