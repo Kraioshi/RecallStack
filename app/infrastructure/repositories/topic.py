@@ -41,3 +41,15 @@ class SQLAlchemyTopicRepository:
         await self._session.flush()
 
         return topic
+
+    async def get_by_slug(self, slug: str, parent_id: UUID | None) -> Topic | None:
+        stmt = select(Topic).where(
+            Topic.slug == slug,
+            Topic.parent_id == parent_id,
+        )
+        result = await self._session.execute(stmt)
+
+        return result.scalar_one_or_none()
+
+    async def delete(self, topic: Topic) -> None:
+        await self._session.delete(topic)
