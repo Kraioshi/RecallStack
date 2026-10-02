@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    env:
+      POSTGRES_DB: recallstack_test
+      POSTGRES_USER: recallstack
+      POSTGRES_PASSWORD: recallstack
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+
+    services:
+      postgres:
+        image: postgres:17
+
+        env:
+          POSTGRES_DB: recallstack_test
+          POSTGRES_USER: recallstack
+          POSTGRES_PASSWORD: recallstack
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U recallstack -d recallstack_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      # --locked makes CI fail if uv.lock is out of sync with pyproject.toml
+      # CI should check the committed lockfile, not modify it
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Mypy check
+        run: uv run mypy .
+
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+
+      # Fails if Alembic detects schema changes in the models
+      # that are not represented by the committed migrations.
+      - name: Check migrations are up to date
+        run: uv run alembic check
+
+      - name: Run tests
+        run: uv run pytest
