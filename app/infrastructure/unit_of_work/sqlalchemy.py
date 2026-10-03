@@ -3,7 +3,9 @@ from typing import Self
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.infrastructure.repositories.question import SQLAlchemyQuestionRepository
 from app.infrastructure.repositories.topic import SQLAlchemyTopicRepository
+from app.repositories.question import QuestionRepository
 from app.repositories.topic import TopicRepository
 
 
@@ -30,6 +32,7 @@ class SQLAlchemyUnitOfWork:
     # Expose the repo via its abstraction instead of SQLAlchemyTopicRepository
     # This implementation is infrastructure detail and caller should not depend on it.
     topics: TopicRepository
+    questions: QuestionRepository
 
     def __init__(
         self,
@@ -48,6 +51,7 @@ class SQLAlchemyUnitOfWork:
         # Because of that all repo operations in the same transaction
         # can be commited or rolled back together
         self.topics = SQLAlchemyTopicRepository(self._session)
+        self.questions = SQLAlchemyQuestionRepository(self._session)
 
         return self
 

@@ -1,6 +1,7 @@
 from types import TracebackType
 from typing import Protocol, Self
 
+from app.repositories.question import QuestionRepository
 from app.repositories.topic import TopicRepository
 
 
@@ -18,6 +19,7 @@ class UnitOfWork(Protocol):
     """
 
     topics: TopicRepository
+    questions: QuestionRepository
 
     async def __aenter__(self) -> Self:
         """Enter UoW and prepare its transaction resources."""
