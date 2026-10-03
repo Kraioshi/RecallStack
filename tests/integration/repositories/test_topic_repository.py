@@ -3,7 +3,7 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.repositories.topic import SQLAlchemyTopicRepository
-from app.models.topic import Topic
+from app.models import Topic  # noqa: F401
 from tests.integration.repositories.factories import TopicFactory
 
 
