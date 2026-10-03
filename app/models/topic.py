@@ -1,10 +1,14 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, FetchedValue, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+
+if TYPE_CHECKING:
+    from app.models.question import Question
 
 
 class Topic(Base):
@@ -78,4 +82,8 @@ class Topic(Base):
     #     parent.children -> [child1, child2]
     children: Mapped[list["Topic"]] = relationship(
         back_populates="parent",
+    )
+
+    questions: Mapped[list["Question"]] = relationship(
+        back_populates="topic",
     )
