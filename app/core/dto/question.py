@@ -3,6 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 from app.core.enums.question import QuestionDifficulty
+from app.core.types import UNSET, _UnsetType
 
 
 @dataclass(frozen=True)
@@ -11,6 +12,14 @@ class CreateQuestionData:
     question: str
     answer: str
     difficulty: QuestionDifficulty
+
+
+@dataclass(frozen=True)
+class UpdateQuestionData:
+    topic_id: UUID | _UnsetType = UNSET
+    question: str | _UnsetType = UNSET
+    answer: str | _UnsetType = UNSET
+    difficulty: QuestionDifficulty | _UnsetType = UNSET
 
 
 @dataclass(frozen=True)
