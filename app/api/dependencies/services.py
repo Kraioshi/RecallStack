@@ -4,6 +4,7 @@ from fastapi import Depends
 
 from app.database.session import async_session_maker
 from app.infrastructure.unit_of_work.sqlalchemy import SQLAlchemyUnitOfWork
+from app.services.question import QuestionService
 from app.services.topic import TopicService
 
 
@@ -36,4 +37,18 @@ def get_topic_service() -> TopicService:
 type TopicServiceDep = Annotated[
     TopicService,
     Depends(get_topic_service),
+]
+
+
+def get_question_service() -> QuestionService:
+    """Build the QuestionService used by the API layer."""
+
+    uow = SQLAlchemyUnitOfWork(async_session_maker)
+
+    return QuestionService(uow)
+
+
+type QuestionServiceDep = Annotated[
+    QuestionService,
+    Depends(get_question_service),
 ]
