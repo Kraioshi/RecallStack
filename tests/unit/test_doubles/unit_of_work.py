@@ -1,8 +1,12 @@
 from types import TracebackType
 from typing import Self
 
+from app.repositories.question import QuestionRepository
 from app.repositories.topic import TopicRepository
-from tests.unit.test_doubles.repositories import FakeTopicRepository
+from tests.unit.test_doubles.repositories import (
+    FakeQuestionRepository,
+    FakeTopicRepository,
+)
 
 
 class FakeUnitOfWork:
@@ -12,8 +16,13 @@ class FakeUnitOfWork:
     without creating a real db session.
     """
 
-    def __init__(self, topics: FakeTopicRepository) -> None:
+    def __init__(
+        self,
+        topics: FakeTopicRepository,
+        questions: FakeQuestionRepository,
+    ) -> None:
         self.topics: TopicRepository = topics
+        self.questions: QuestionRepository = questions
 
         self.committed = False
         self.rolled_back = False

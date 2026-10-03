@@ -1,7 +1,7 @@
 from uuid import UUID, uuid4
 
 from app.core.helpers.dates import now
-from app.models.topic import Topic
+from app.models import Question, Topic
 
 
 class FakeTopicRepository:
@@ -57,3 +57,44 @@ class FakeTopicRepository:
 
     async def delete(self, topic: Topic) -> None:
         self._topics.remove(topic)
+
+
+class FakeQuestionRepository:
+    """
+    In-memory QuestionRepository implementation for service unit tests.
+    """
+
+    def __init__(self, questions: list[Question] | None = None) -> None:
+        self._questions = list(questions or [])
+
+    async def get_by_id(self, question_id: UUID) -> Question | None:
+        return next(
+            (question for question in self._questions if question.id == question_id),
+            None,
+        )
+
+    async def get_by_topic_id(self, topic_id: UUID) -> list[Question]:
+        return [
+            question for question in self._questions if question.topic_id == topic_id
+        ]
+
+    async def add(self, question: Question) -> Question:
+        # PostgreSQL normally populates database-generated fields during flush().
+        # The fake has no database, so it simulates the values the service relies on.
+        timestamp = now()
+
+        if question.id is None:
+            question.id = uuid4()
+
+        if question.created_at is None:
+            question.created_at = timestamp
+
+        if question.updated_at is None:
+            question.updated_at = timestamp
+
+        self._questions.append(question)
+
+        return question
+
+    async def delete(self, question: Question) -> None:
+        self._questions.remove(question)
