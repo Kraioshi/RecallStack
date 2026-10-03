@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.core.dto.question import CreateQuestionData, QuestionData
+from app.core.dto.question import CreateQuestionData, QuestionData, UpdateQuestionData
 from app.core.enums.question import QuestionDifficulty
 from app.core.exceptions.question import QuestionNotFoundError
 from app.core.exceptions.topic import TopicNotFoundError
@@ -237,6 +237,218 @@ class TestCreateQuestion:
         # Act
         with pytest.raises(TopicNotFoundError):
             await service.create_question(question_data)
+
+        # Assert
+        assert uow.committed is False
+        assert uow.rolled_back is True
+
+
+class TestUpdateQuestion:
+    async def test_updates_question_fields(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # arrange
+        question = make_question()
+
+        service, uow = question_service_factory(questions=[question])
+
+        original_answer = question.answer
+        original_topic_id = question.topic_id
+        original_difficulty = question.difficulty
+
+        update_data = UpdateQuestionData(question="Why am I even writing tests?")
+        # act
+        await service.update_question(question_id=question.id, data=update_data)
+        result = await service.get_question(question.id)
+
+        # assert
+        assert result.question == update_data.question
+        assert result.answer == original_answer
+        assert result.topic_id == original_topic_id
+        assert result.difficulty == original_difficulty
+
+    async def test_moves_question_to_another_topic(
+        self, question_service_factory: QuestionServiceFactory
+    ) -> None:
+        # arrange
+        original_topic = make_topic(name="original")
+        new_topic = make_topic(name="new")
+        question = make_question(topic_id=original_topic.id)
+
+        service, _ = question_service_factory(
+            topics=[original_topic, new_topic], questions=[question]
+        )
+
+        update_data = UpdateQuestionData(topic_id=new_topic.id)
+        # act
+        result = await service.update_question(question.id, update_data)
+
+        # assert
+        assert result.topic_id == new_topic.id
+        assert result.id == question.id
+
+    async def test_leaves_unspecified_fields_unchanged(
+        self, question_service_factory: QuestionServiceFactory
+    ) -> None:
+        # arrange
+        question = make_question()
+        original_question = question.question
+        original_answer = question.answer
+        original_topic_id = question.topic_id
+        original_created_at = question.created_at
+
+        service, _ = question_service_factory(questions=[question])
+
+        update_data = UpdateQuestionData(difficulty=QuestionDifficulty.HARD)
+
+        # act
+        result = await service.update_question(question.id, update_data)
+
+        # assert
+        assert result.difficulty == QuestionDifficulty.HARD
+
+        assert result.question == original_question
+        assert result.answer == original_answer
+        assert result.topic_id == original_topic_id
+        assert result.created_at == original_created_at
+        assert result.id == question.id
+
+    async def test_raises_when_question_does_not_exist(
+        self, question_service_factory: QuestionServiceFactory
+    ) -> None:
+        question_id = uuid4()
+        service, _ = question_service_factory()
+        update_data = UpdateQuestionData()
+
+        with pytest.raises(QuestionNotFoundError) as exc_info:
+            await service.update_question(question_id, update_data)
+
+        assert exc_info.value.question_id == question_id
+
+    async def test_raises_when_new_topic_does_not_exist(
+        self, question_service_factory: QuestionServiceFactory
+    ) -> None:
+        question = make_question()
+        topic_id = uuid4()
+        service, _ = question_service_factory(questions=[question])
+        update_data = UpdateQuestionData(topic_id=topic_id)
+
+        with pytest.raises(TopicNotFoundError) as exc_info:
+            await service.update_question(question.id, update_data)
+
+        assert exc_info.value.topic_id == topic_id
+
+    async def test_commits_unit_of_work(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        question = make_question()
+
+        service, uow = question_service_factory(
+            questions=[question],
+        )
+
+        update_data = UpdateQuestionData(
+            question="Updated question",
+        )
+
+        # Act
+        await service.update_question(question.id, update_data)
+
+        # Assert
+        assert uow.committed is True
+
+    async def test_does_not_commit_on_failed_update(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        question = make_question()
+        missing_topic_id = uuid4()
+
+        service, uow = question_service_factory(
+            questions=[question],
+        )
+
+        update_data = UpdateQuestionData(
+            topic_id=missing_topic_id,
+        )
+
+        # Act
+        with pytest.raises(TopicNotFoundError):
+            await service.update_question(question.id, update_data)
+
+        # Assert
+        assert uow.committed is False
+        assert uow.rolled_back is True
+
+
+class TestDeleteQuestion:
+    async def test_deletes_existing_question(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        question = make_question()
+
+        service, uow = question_service_factory(
+            questions=[question],
+        )
+
+        # Act
+        await service.delete_question(question.id)
+
+        # Assert
+        deleted = await uow.questions.get_by_id(question.id)
+
+        assert deleted is None
+
+    async def test_raises_when_question_does_not_exist(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        question_id = uuid4()
+
+        service, _ = question_service_factory()
+
+        # Act / Assert
+        with pytest.raises(QuestionNotFoundError) as exc_info:
+            await service.delete_question(question_id)
+
+        assert exc_info.value.question_id == question_id
+
+    async def test_commits_unit_of_work(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        question = make_question()
+
+        service, uow = question_service_factory(
+            questions=[question],
+        )
+
+        # Act
+        await service.delete_question(question.id)
+
+        # Assert
+        assert uow.committed is True
+
+    async def test_does_not_commit_when_question_does_not_exist(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        question_id = uuid4()
+
+        service, uow = question_service_factory()
+
+        # Act
+        with pytest.raises(QuestionNotFoundError):
+            await service.delete_question(question_id)
 
         # Assert
         assert uow.committed is False

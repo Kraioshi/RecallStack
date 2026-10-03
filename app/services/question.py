@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from app.core.dto.question import CreateQuestionData, QuestionData
+from app.core.dto.question import CreateQuestionData, QuestionData, UpdateQuestionData
 from app.core.exceptions.question import QuestionNotFoundError
 from app.core.exceptions.topic import TopicNotFoundError
+from app.core.types import is_set
 from app.models import Question
 from app.unit_of_work.base import UnitOfWork
 
@@ -49,6 +50,36 @@ class QuestionService:
 
             return self._to_question_data(created)
 
+    async def update_question(
+        self,
+        question_id: UUID,
+        data: UpdateQuestionData,
+    ) -> QuestionData:
+        """Update a question or raise if it does not exist."""
+
+        async with self._uow:
+            question = await self._get_question_or_raise(question_id)
+
+            topic_id = data.topic_id
+            if is_set(topic_id) and topic_id != question.topic_id:
+                await self._ensure_topic_exists(topic_id)
+
+            self._apply_updates(question, data)
+
+            await self._uow.commit()
+
+            return self._to_question_data(question)
+
+    async def delete_question(self, question_id: UUID) -> None:
+        """Delete a question or raise if it does not exist."""
+
+        async with self._uow:
+            question = await self._get_question_or_raise(question_id)
+
+            await self._uow.questions.delete(question)
+
+            await self._uow.commit()
+
     async def _get_question_or_raise(
         self,
         question_id: UUID,
@@ -65,6 +96,27 @@ class QuestionService:
 
         if topic is None:
             raise TopicNotFoundError(topic_id)
+
+    @staticmethod
+    def _apply_updates(
+        question: Question,
+        data: UpdateQuestionData,
+    ) -> None:
+        topic_id = data.topic_id
+        if is_set(topic_id):
+            question.topic_id = topic_id
+
+        question_text = data.question
+        if is_set(question_text):
+            question.question = question_text
+
+        answer = data.answer
+        if is_set(answer):
+            question.answer = answer
+
+        difficulty = data.difficulty
+        if is_set(difficulty):
+            question.difficulty = difficulty
 
     @staticmethod
     def _to_question_data(question: Question) -> QuestionData:
