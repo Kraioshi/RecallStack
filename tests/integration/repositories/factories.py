@@ -1,5 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums.question import QuestionDifficulty
+from app.models import Question
 from app.models.topic import Topic
 
 
@@ -26,3 +28,30 @@ class TopicFactory:
         await self._session.flush()
 
         return topic
+
+
+class QuestionFactory:
+    """Create and persist Question test data using the current test session."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def __call__(
+        self,
+        *,
+        topic: Topic,
+        question: str,
+        answer: str,
+        difficulty: QuestionDifficulty,
+    ) -> Question:
+        question_entity = Question(
+            topic_id=topic.id,
+            question=question,
+            answer=answer,
+            difficulty=difficulty,
+        )
+
+        self._session.add(question_entity)
+        await self._session.flush()
+
+        return question_entity
