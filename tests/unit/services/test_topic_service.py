@@ -2,7 +2,12 @@ from uuid import uuid4
 
 import pytest
 
-from app.core.dto.topic import CreateTopicData, TopicData, UpdateTopicData
+from app.core.dto.topic import (
+    CreateTopicData,
+    TopicData,
+    TopicTreeData,
+    UpdateTopicData,
+)
 from app.core.exceptions.topic import (
     TopicHasChildrenError,
     TopicNotFoundError,
@@ -540,3 +545,106 @@ class TestDeleteTopic:
         assert await uow.topics.get_by_id(parent.id) is not None
         assert await uow.topics.get_by_id(child.id) is not None
         assert uow.committed is False
+
+
+class TestGetTree:
+    async def test_returns_full_topic_tree(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        python = make_topic(
+            name="Python",
+            slug="python",
+        )
+        frameworks = make_topic(
+            name="Frameworks",
+            slug="frameworks",
+            parent_id=python.id,
+        )
+        fastapi = make_topic(
+            name="FastAPI",
+            slug="fastapi",
+            parent_id=frameworks.id,
+        )
+        core = make_topic(
+            name="Core Concepts",
+            slug="core-concepts",
+            parent_id=fastapi.id,
+        )
+        routing = make_topic(
+            name="Routing",
+            slug="routing",
+            parent_id=fastapi.id,
+        )
+        sql = make_topic(
+            name="SQL",
+            slug="sql",
+        )
+
+        service, _ = topic_service_factory(
+            [
+                python,
+                frameworks,
+                fastapi,
+                core,
+                routing,
+                sql,
+            ]
+        )
+
+        result = await service.get_tree()
+
+        assert result == [
+            TopicTreeData(
+                id=python.id,
+                name="Python",
+                slug="python",
+                description=python.description,
+                children=(
+                    TopicTreeData(
+                        id=frameworks.id,
+                        name="Frameworks",
+                        slug="frameworks",
+                        description=frameworks.description,
+                        children=(
+                            TopicTreeData(
+                                id=fastapi.id,
+                                name="FastAPI",
+                                slug="fastapi",
+                                description=fastapi.description,
+                                children=(
+                                    TopicTreeData(
+                                        id=core.id,
+                                        name="Core Concepts",
+                                        slug="core-concepts",
+                                        description=core.description,
+                                    ),
+                                    TopicTreeData(
+                                        id=routing.id,
+                                        name="Routing",
+                                        slug="routing",
+                                        description=routing.description,
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            TopicTreeData(
+                id=sql.id,
+                name="SQL",
+                slug="sql",
+                description=sql.description,
+            ),
+        ]
+
+    async def test_returns_empty_list_when_no_topics_exist(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        service, _ = topic_service_factory()
+
+        result = await service.get_tree()
+
+        assert result == []

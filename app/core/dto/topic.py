@@ -35,3 +35,12 @@ class TopicData:
     description: str | None
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class TopicTreeData:
+    id: UUID
+    name: str
+    slug: str
+    description: str | None
+    children: tuple["TopicTreeData", ...] = ()

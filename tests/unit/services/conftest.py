@@ -2,6 +2,7 @@ from typing import Protocol
 
 import pytest
 
+from app.core.builders.topic_tree import TopicTreeBuilder
 from app.models import Question
 from app.models.topic import Topic
 from app.services.question import QuestionService
@@ -34,7 +35,11 @@ def topic_service_factory() -> TopicServiceFactory:
             topics=topic_repository,
             questions=question_repository,
         )
-        service = TopicService(uow)
+
+        service = TopicService(
+            uow=uow,
+            tree_builder=TopicTreeBuilder(),
+        )
 
         return service, uow
 

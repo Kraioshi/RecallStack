@@ -1,6 +1,12 @@
 from uuid import UUID
 
-from app.core.dto.topic import CreateTopicData, TopicData, UpdateTopicData
+from app.core.builders.topic_tree import TopicTreeBuilder
+from app.core.dto.topic import (
+    CreateTopicData,
+    TopicData,
+    TopicTreeData,
+    UpdateTopicData,
+)
 from app.core.exceptions.topic import (
     TopicHasChildrenError,
     TopicNotFoundError,
@@ -14,8 +20,13 @@ from app.unit_of_work.base import UnitOfWork
 class TopicService:
     """Service fr app level operations for topics."""
 
-    def __init__(self, uow: UnitOfWork) -> None:
+    def __init__(
+        self,
+        uow: UnitOfWork,
+        tree_builder=TopicTreeBuilder,
+    ) -> None:
         self._uow = uow
+        self._tree_builder = tree_builder
 
     async def get_topic(self, topic_id: UUID) -> TopicData:
         """Return a topic or raise if it does not exist."""
@@ -128,6 +139,12 @@ class TopicService:
                 slug=slug,
                 parent_id=parent_id,
             )
+
+    async def get_tree(self) -> list[TopicTreeData]:
+        async with self._uow:
+            topics = await self._uow.topics.get_all()
+
+        return self._tree_builder.build(topics)
 
     @staticmethod
     def _apply_updates(
