@@ -7,7 +7,7 @@ from app.api.dependencies.services import TopicServiceDep
 from app.api.topics import mappers as topic_mapper
 from app.api.topics.params import TopicIdPath
 from app.api.topics.schemas.request import CreateTopicRequest, UpdateTopicRequest
-from app.api.topics.schemas.response import TopicResponse
+from app.api.topics.schemas.response import TopicResponse, TopicTreeResponse
 
 router = APIRouter(
     prefix="/topics",
@@ -15,25 +15,34 @@ router = APIRouter(
 )
 
 
+# Topic collection
 @router.get(
-    "/{topic_id}",
-    response_model=TopicResponse,
-    summary="Get a topic",
-    response_description="The requested topic.",
-    responses={
-        404: {
-            "description": "Topic not found.",
-        },
-    },
+    "",
+    response_model=list[TopicResponse],
+    summary="List root topics",
+    response_description="The root-level topics.",
 )
-async def get_topic(
-    topic_id: TopicIdPath,
+async def list_root_topics(
     service: TopicServiceDep,
-) -> TopicResponse:
-    """Retrieve a single topic by its unique identifier."""
-    topic = await service.get_topic(topic_id)
+) -> list[TopicResponse]:
+    """Retrieve all root-level topics."""
+    topics = await service.list_root_topics()
 
-    return topic_mapper.to_topic_response(topic)
+    return topic_mapper.to_topic_responses(topics)
+
+
+@router.get(
+    "/tree",
+    response_model=list[TopicTreeResponse],
+    summary="Get full topic tree",
+    response_description="Complete hierarchical topic tree",
+)
+async def get_topic_tree(
+    service: TopicServiceDep,
+) -> list[TopicTreeResponse]:
+    tree = await service.get_tree()
+
+    return topic_mapper.to_topic_tree_responses(tree)
 
 
 @router.post(
@@ -61,39 +70,26 @@ async def create_topic(
     return topic_mapper.to_topic_response(topic)
 
 
-@router.delete(
+# Single topic
+@router.get(
     "/{topic_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a topic",
+    response_model=TopicResponse,
+    summary="Get a topic",
+    response_description="The requested topic.",
     responses={
         404: {
             "description": "Topic not found.",
         },
-        409: {
-            "description": "Topic has children and cannot be deleted.",
-        },
     },
 )
-async def delete_topic(
+async def get_topic(
     topic_id: TopicIdPath,
     service: TopicServiceDep,
-) -> None:
-    await service.delete_topic(topic_id)
+) -> TopicResponse:
+    """Retrieve a single topic by its unique identifier."""
+    topic = await service.get_topic(topic_id)
 
-
-@router.get(
-    "",
-    response_model=list[TopicResponse],
-    summary="List root topics",
-    response_description="The root-level topics.",
-)
-async def list_root_topics(
-    service: TopicServiceDep,
-) -> list[TopicResponse]:
-    """Retrieve all root-level topics."""
-    topics = await service.list_root_topics()
-
-    return topic_mapper.to_topic_responses(topics)
+    return topic_mapper.to_topic_response(topic)
 
 
 @router.get(
@@ -142,3 +138,23 @@ async def update_topic(
     topic = await service.update_topic(topic_id, data)
 
     return topic_mapper.to_topic_response(topic)
+
+
+@router.delete(
+    "/{topic_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a topic",
+    responses={
+        404: {
+            "description": "Topic not found.",
+        },
+        409: {
+            "description": "Topic has children and cannot be deleted.",
+        },
+    },
+)
+async def delete_topic(
+    topic_id: TopicIdPath,
+    service: TopicServiceDep,
+) -> None:
+    await service.delete_topic(topic_id)

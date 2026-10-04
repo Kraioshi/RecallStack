@@ -23,7 +23,7 @@ class TopicService:
     def __init__(
         self,
         uow: UnitOfWork,
-        tree_builder=TopicTreeBuilder,
+        tree_builder: TopicTreeBuilder,
     ) -> None:
         self._uow = uow
         self._tree_builder = tree_builder
@@ -144,7 +144,7 @@ class TopicService:
         async with self._uow:
             topics = await self._uow.topics.get_all()
 
-        return self._tree_builder.build(topics)
+            return self._tree_builder.build(topics)
 
     @staticmethod
     def _apply_updates(

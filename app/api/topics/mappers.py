@@ -13,8 +13,13 @@ Explicit mapping instead of `model_dump()` to avoid coupling models by field nam
 """
 
 from app.api.topics.schemas.request import CreateTopicRequest, UpdateTopicRequest
-from app.api.topics.schemas.response import TopicResponse
-from app.core.dto.topic import CreateTopicData, TopicData, UpdateTopicData
+from app.api.topics.schemas.response import TopicResponse, TopicTreeResponse
+from app.core.dto.topic import (
+    CreateTopicData,
+    TopicData,
+    TopicTreeData,
+    UpdateTopicData,
+)
 from app.core.types import UNSET
 
 
@@ -55,3 +60,15 @@ def to_update_topic_data(
         slug=request.slug if request.slug is not None else UNSET,
         description=request.description if "description" in fields else UNSET,
     )
+
+
+def to_topic_tree_response(
+    data: TopicTreeData,
+) -> TopicTreeResponse:
+    return TopicTreeResponse.model_validate(data)
+
+
+def to_topic_tree_responses(
+    data: list[TopicTreeData],
+) -> list[TopicTreeResponse]:
+    return [to_topic_tree_response(topic) for topic in data]
