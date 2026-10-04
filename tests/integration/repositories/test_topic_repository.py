@@ -262,3 +262,36 @@ class TestGetBySlug:
         )
 
         assert result is None
+
+
+class TestGetAll:
+    async def test_returns_all_topics(
+        self,
+        topic_repository: SQLAlchemyTopicRepository,
+        topic_factory: TopicFactory,
+    ) -> None:
+        python = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+        frameworks = await topic_factory(
+            name="Frameworks",
+            slug="frameworks",
+            parent=python,
+        )
+        sql = await topic_factory(
+            name="SQL",
+            slug="sql",
+        )
+
+        result = await topic_repository.get_all()
+
+        assert set(result) == {python, frameworks, sql}
+
+    async def test_returns_empty_list_when_no_topics_exist(
+        self,
+        topic_repository: SQLAlchemyTopicRepository,
+    ) -> None:
+        result = await topic_repository.get_all()
+
+        assert result == []

@@ -58,6 +58,9 @@ class FakeTopicRepository:
     async def delete(self, topic: Topic) -> None:
         self._topics.remove(topic)
 
+    async def get_all(self) -> list[Topic]:
+        return list(self._topics)
+
 
 class FakeQuestionRepository:
     """

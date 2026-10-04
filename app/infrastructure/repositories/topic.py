@@ -53,3 +53,10 @@ class SQLAlchemyTopicRepository:
 
     async def delete(self, topic: Topic) -> None:
         await self._session.delete(topic)
+
+    async def get_all(self) -> list[Topic]:
+        stmt = select(Topic)
+
+        result = await self._session.scalars(stmt)
+
+        return list(result.all())
