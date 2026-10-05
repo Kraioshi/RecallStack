@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums.question import QuestionDifficulty
 from app.models.question import Question
 
 
@@ -39,7 +40,7 @@ class SQLAlchemyQuestionRepository:
     async def delete(self, question: Question) -> None:
         await self._session.delete(question)
 
-    async def count_by_topic(self):
+    async def count_by_topic(self) -> dict[UUID, int]:
         """
         SELECT
             questions.topic_id,
@@ -54,3 +55,38 @@ class SQLAlchemyQuestionRepository:
         result = await self._session.execute(stmt)
 
         return {topic_id: count for topic_id, count in result.all()}
+
+    async def count_by_topic_and_difficulty(
+        self,
+    ) -> dict[UUID, dict[QuestionDifficulty, int]]:
+        """
+        Return question counts grouped by topic and difficulty.
+
+        Topics without questions are not included in the result.
+        Difficulties with zero questions are not included as well.
+
+        SELECT
+            questions.topic_id,
+            questions.difficulty,
+            COUNT(questions.id)
+        FROM questions
+        GROUP BY
+            questions.topic_id,
+            questions.difficulty;
+        """
+        stmt = select(
+            Question.topic_id,
+            Question.difficulty,
+            func.count(Question.id),
+        ).group_by(
+            Question.topic_id,
+            Question.difficulty,
+        )
+        result = await self._session.execute(stmt)
+
+        counts: dict[UUID, dict[QuestionDifficulty, int]] = {}
+
+        for topic_id, difficulty, count in result.all():
+            counts.setdefault(topic_id, {})[difficulty] = count
+
+        return counts
