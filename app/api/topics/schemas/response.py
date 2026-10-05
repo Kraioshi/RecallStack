@@ -27,4 +27,5 @@ class TopicTreeResponse(BaseModel):
     name: str
     slug: str
     description: str | None
+    question_count: int
     children: list["TopicTreeResponse"] = Field(default_factory=list)
