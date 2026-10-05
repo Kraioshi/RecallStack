@@ -169,3 +169,54 @@ class TestDelete:
         result = await question_repository.get_by_id(question_id)
 
         assert result is None
+
+
+class TestCountByTopic:
+    async def test_returns_question_counts_grouped_by_topic(
+        self,
+        question_repository: SQLAlchemyQuestionRepository,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+    ) -> None:
+        python = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+        sql = await topic_factory(
+            name="SQL",
+            slug="sql",
+        )
+
+        await question_factory(
+            topic=python,
+            question="What is a decorator?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+        await question_factory(
+            topic=python,
+            question="What is a generator?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+        await question_factory(
+            topic=sql,
+            question="What is an index?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        result = await question_repository.count_by_topic()
+
+        assert result == {
+            python.id: 2,
+            sql.id: 1,
+        }
+
+    async def test_returns_empty_mapping_when_no_questions_exist(
+        self,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        result = await question_repository.count_by_topic()
+
+        assert result == {}
