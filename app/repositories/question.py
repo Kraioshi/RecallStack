@@ -1,6 +1,7 @@
 from typing import Protocol
 from uuid import UUID
 
+from app.core.enums.question import QuestionDifficulty
 from app.models.question import Question
 
 
@@ -25,3 +26,7 @@ class QuestionRepository(Protocol):
     async def delete(self, question: Question) -> None: ...
 
     async def count_by_topic(self) -> dict[UUID, int]: ...
+
+    async def count_by_topic_and_difficulty(
+        self,
+    ) -> dict[UUID, dict[QuestionDifficulty, int]]: ...
