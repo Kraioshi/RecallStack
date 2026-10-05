@@ -43,4 +43,5 @@ class TopicTreeData:
     name: str
     slug: str
     description: str | None
+    question_count: int
     children: tuple["TopicTreeData", ...] = ()
