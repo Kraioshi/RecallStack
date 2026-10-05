@@ -109,6 +109,13 @@ class TopicService:
 
             await self._uow.commit()
 
+    async def get_tree(self) -> list[TopicTreeData]:
+        async with self._uow:
+            topics = await self._uow.topics.get_all()
+            counts = await self._uow.questions.count_by_topic()
+
+            return self._tree_builder.build(topics, question_counts=counts)
+
     async def _get_topic_or_raise(
         self,
         topic_id: UUID,
@@ -139,12 +146,6 @@ class TopicService:
                 slug=slug,
                 parent_id=parent_id,
             )
-
-    async def get_tree(self) -> list[TopicTreeData]:
-        async with self._uow:
-            topics = await self._uow.topics.get_all()
-
-            return self._tree_builder.build(topics)
 
     @staticmethod
     def _apply_updates(
