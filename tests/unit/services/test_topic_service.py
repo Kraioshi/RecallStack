@@ -5,9 +5,11 @@ import pytest
 from app.core.dto.topic import (
     CreateTopicData,
     TopicData,
+    TopicQuestionCountData,
     TopicTreeData,
     UpdateTopicData,
 )
+from app.core.enums.question import QuestionDifficulty
 from app.core.exceptions.topic import (
     TopicHasChildrenError,
     TopicNotFoundError,
@@ -593,6 +595,7 @@ class TestGetTree:
         )
 
         result = await service.get_tree()
+        zero_counts = TopicQuestionCountData(easy=0, medium=0, hard=0, total=0)
 
         assert result == [
             TopicTreeData(
@@ -600,35 +603,35 @@ class TestGetTree:
                 name="Python",
                 slug="python",
                 description=python.description,
-                question_count=0,
+                question_counts=zero_counts,
                 children=(
                     TopicTreeData(
                         id=frameworks.id,
                         name="Frameworks",
                         slug="frameworks",
                         description=frameworks.description,
-                        question_count=0,
+                        question_counts=zero_counts,
                         children=(
                             TopicTreeData(
                                 id=fastapi.id,
                                 name="FastAPI",
                                 slug="fastapi",
                                 description=fastapi.description,
-                                question_count=0,
+                                question_counts=zero_counts,
                                 children=(
                                     TopicTreeData(
                                         id=core.id,
                                         name="Core Concepts",
                                         slug="core-concepts",
                                         description=core.description,
-                                        question_count=0,
+                                        question_counts=zero_counts,
                                     ),
                                     TopicTreeData(
                                         id=routing.id,
                                         name="Routing",
                                         slug="routing",
                                         description=routing.description,
-                                        question_count=0,
+                                        question_counts=zero_counts,
                                     ),
                                 ),
                             ),
@@ -641,11 +644,11 @@ class TestGetTree:
                 name="SQL",
                 slug="sql",
                 description=sql.description,
-                question_count=0,
+                question_counts=zero_counts,
             ),
         ]
 
-    async def test_returns_full_topic_tree_with_question_counts(
+    async def test_returns_full_topic_tree_with_question_counts_by_difficulty(
         self,
         topic_service_factory: TopicServiceFactory,
     ) -> None:
@@ -678,14 +681,26 @@ class TestGetTree:
             slug="sql",
         )
 
-        core_question_1 = make_question(
+        core_easy_1 = make_question(
             topic_id=core.id,
+            difficulty=QuestionDifficulty.EASY,
         )
-        core_question_2 = make_question(
+        core_easy_2 = make_question(
             topic_id=core.id,
+            difficulty=QuestionDifficulty.EASY,
         )
-        routing_question = make_question(
+        core_medium = make_question(
+            topic_id=core.id,
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+        core_hard = make_question(
+            topic_id=core.id,
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        routing_medium = make_question(
             topic_id=routing.id,
+            difficulty=QuestionDifficulty.MEDIUM,
         )
 
         service, _ = topic_service_factory(
@@ -698,13 +713,21 @@ class TestGetTree:
                 sql,
             ],
             questions=[
-                core_question_1,
-                core_question_2,
-                routing_question,
+                core_easy_1,
+                core_easy_2,
+                core_medium,
+                core_hard,
+                routing_medium,
             ],
         )
 
         result = await service.get_tree()
+        zero_counts = TopicQuestionCountData(
+            easy=0,
+            medium=0,
+            hard=0,
+            total=0,
+        )
 
         assert result == [
             TopicTreeData(
@@ -712,35 +735,45 @@ class TestGetTree:
                 name="Python",
                 slug="python",
                 description=python.description,
-                question_count=0,
+                question_counts=zero_counts,
                 children=(
                     TopicTreeData(
                         id=frameworks.id,
                         name="Frameworks",
                         slug="frameworks",
                         description=frameworks.description,
-                        question_count=0,
+                        question_counts=zero_counts,
                         children=(
                             TopicTreeData(
                                 id=fastapi.id,
                                 name="FastAPI",
                                 slug="fastapi",
                                 description=fastapi.description,
-                                question_count=0,
+                                question_counts=zero_counts,
                                 children=(
                                     TopicTreeData(
                                         id=core.id,
                                         name="Core Concepts",
                                         slug="core-concepts",
                                         description=core.description,
-                                        question_count=2,
+                                        question_counts=TopicQuestionCountData(
+                                            easy=2,
+                                            medium=1,
+                                            hard=1,
+                                            total=4,
+                                        ),
                                     ),
                                     TopicTreeData(
                                         id=routing.id,
                                         name="Routing",
                                         slug="routing",
                                         description=routing.description,
-                                        question_count=1,
+                                        question_counts=TopicQuestionCountData(
+                                            easy=0,
+                                            medium=1,
+                                            hard=0,
+                                            total=1,
+                                        ),
                                     ),
                                 ),
                             ),
@@ -753,7 +786,7 @@ class TestGetTree:
                 name="SQL",
                 slug="sql",
                 description=sql.description,
-                question_count=0,
+                question_counts=zero_counts,
             ),
         ]
 
