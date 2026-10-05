@@ -101,3 +101,11 @@ class FakeQuestionRepository:
 
     async def delete(self, question: Question) -> None:
         self._questions.remove(question)
+
+    async def count_by_topic(self) -> dict[UUID, int]:
+        counts: dict[UUID, int] = {}
+
+        for question in self._questions:
+            counts[question.topic_id] = counts.get(question.topic_id, 0) + 1
+
+        return counts

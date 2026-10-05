@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.question import Question
@@ -38,3 +38,19 @@ class SQLAlchemyQuestionRepository:
 
     async def delete(self, question: Question) -> None:
         await self._session.delete(question)
+
+    async def count_by_topic(self):
+        """
+        SELECT
+            questions.topic_id,
+            COUNT(questions.id)
+        FROM questions
+        GROUP BY questions.topic_id;
+        """
+        stmt = select(Question.topic_id, func.count(Question.id)).group_by(
+            Question.topic_id
+        )
+
+        result = await self._session.execute(stmt)
+
+        return {topic_id: count for topic_id, count in result.all()}
