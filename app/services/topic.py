@@ -12,7 +12,7 @@ from app.core.exceptions.topic import (
     TopicNotFoundError,
     TopicSlugAlreadyExistsError,
 )
-from app.core.types import is_set
+from app.core.types.common import is_set
 from app.models.topic import Topic
 from app.unit_of_work.base import UnitOfWork
 
@@ -112,7 +112,7 @@ class TopicService:
     async def get_tree(self) -> list[TopicTreeData]:
         async with self._uow:
             topics = await self._uow.topics.get_all()
-            counts = await self._uow.questions.count_by_topic()
+            counts = await self._uow.questions.count_by_topic_and_difficulty()
 
             return self._tree_builder.build(topics, question_counts=counts)
 

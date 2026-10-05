@@ -14,7 +14,7 @@ from app.core.dto.question import (
     QuestionData,
     UpdateQuestionData,
 )
-from app.core.types import UNSET
+from app.core.types.common import UNSET
 
 
 def to_create_question_data(

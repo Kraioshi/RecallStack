@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from app.core.types import UNSET, _UnsetType
+from app.core.types.common import UNSET, _UnsetType
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,10 +38,18 @@ class TopicData:
 
 
 @dataclass(frozen=True, slots=True)
+class TopicQuestionCountData:
+    easy: int
+    medium: int
+    hard: int
+    total: int
+
+
+@dataclass(frozen=True, slots=True)
 class TopicTreeData:
     id: UUID
     name: str
     slug: str
     description: str | None
-    question_count: int
+    question_counts: TopicQuestionCountData
     children: tuple["TopicTreeData", ...] = ()
