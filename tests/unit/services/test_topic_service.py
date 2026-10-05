@@ -15,7 +15,7 @@ from app.core.exceptions.topic import (
 )
 from app.core.helpers.dates import now
 from app.models.topic import Topic
-from tests.unit.factories import make_topic
+from tests.unit.factories import make_question, make_topic
 from tests.unit.services.conftest import TopicServiceFactory
 
 
@@ -600,30 +600,35 @@ class TestGetTree:
                 name="Python",
                 slug="python",
                 description=python.description,
+                question_count=0,
                 children=(
                     TopicTreeData(
                         id=frameworks.id,
                         name="Frameworks",
                         slug="frameworks",
                         description=frameworks.description,
+                        question_count=0,
                         children=(
                             TopicTreeData(
                                 id=fastapi.id,
                                 name="FastAPI",
                                 slug="fastapi",
                                 description=fastapi.description,
+                                question_count=0,
                                 children=(
                                     TopicTreeData(
                                         id=core.id,
                                         name="Core Concepts",
                                         slug="core-concepts",
                                         description=core.description,
+                                        question_count=0,
                                     ),
                                     TopicTreeData(
                                         id=routing.id,
                                         name="Routing",
                                         slug="routing",
                                         description=routing.description,
+                                        question_count=0,
                                     ),
                                 ),
                             ),
@@ -636,6 +641,119 @@ class TestGetTree:
                 name="SQL",
                 slug="sql",
                 description=sql.description,
+                question_count=0,
+            ),
+        ]
+
+    async def test_returns_full_topic_tree_with_question_counts(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        python = make_topic(
+            name="Python",
+            slug="python",
+        )
+        frameworks = make_topic(
+            name="Frameworks",
+            slug="frameworks",
+            parent_id=python.id,
+        )
+        fastapi = make_topic(
+            name="FastAPI",
+            slug="fastapi",
+            parent_id=frameworks.id,
+        )
+        core = make_topic(
+            name="Core Concepts",
+            slug="core-concepts",
+            parent_id=fastapi.id,
+        )
+        routing = make_topic(
+            name="Routing",
+            slug="routing",
+            parent_id=fastapi.id,
+        )
+        sql = make_topic(
+            name="SQL",
+            slug="sql",
+        )
+
+        core_question_1 = make_question(
+            topic_id=core.id,
+        )
+        core_question_2 = make_question(
+            topic_id=core.id,
+        )
+        routing_question = make_question(
+            topic_id=routing.id,
+        )
+
+        service, _ = topic_service_factory(
+            topics=[
+                python,
+                frameworks,
+                fastapi,
+                core,
+                routing,
+                sql,
+            ],
+            questions=[
+                core_question_1,
+                core_question_2,
+                routing_question,
+            ],
+        )
+
+        result = await service.get_tree()
+
+        assert result == [
+            TopicTreeData(
+                id=python.id,
+                name="Python",
+                slug="python",
+                description=python.description,
+                question_count=0,
+                children=(
+                    TopicTreeData(
+                        id=frameworks.id,
+                        name="Frameworks",
+                        slug="frameworks",
+                        description=frameworks.description,
+                        question_count=0,
+                        children=(
+                            TopicTreeData(
+                                id=fastapi.id,
+                                name="FastAPI",
+                                slug="fastapi",
+                                description=fastapi.description,
+                                question_count=0,
+                                children=(
+                                    TopicTreeData(
+                                        id=core.id,
+                                        name="Core Concepts",
+                                        slug="core-concepts",
+                                        description=core.description,
+                                        question_count=2,
+                                    ),
+                                    TopicTreeData(
+                                        id=routing.id,
+                                        name="Routing",
+                                        slug="routing",
+                                        description=routing.description,
+                                        question_count=1,
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            TopicTreeData(
+                id=sql.id,
+                name="SQL",
+                slug="sql",
+                description=sql.description,
+                question_count=0,
             ),
         ]
 
