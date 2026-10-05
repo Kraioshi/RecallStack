@@ -18,6 +18,7 @@ class TopicServiceFactory(Protocol):
     def __call__(
         self,
         topics: list[Topic] | None = None,
+        questions: list[Question] | None = None,
     ) -> tuple[TopicService, FakeUnitOfWork]: ...
 
 
@@ -27,9 +28,10 @@ def topic_service_factory() -> TopicServiceFactory:
 
     def create_service(
         topics: list[Topic] | None = None,
+        questions: list[Question] | None = None,
     ) -> tuple[TopicService, FakeUnitOfWork]:
         topic_repository = FakeTopicRepository(topics)
-        question_repository = FakeQuestionRepository()
+        question_repository = FakeQuestionRepository(questions)
 
         uow = FakeUnitOfWork(
             topics=topic_repository,
