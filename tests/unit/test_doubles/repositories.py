@@ -1,5 +1,6 @@
 from uuid import UUID, uuid4
 
+from app.core.enums.question import QuestionDifficulty
 from app.core.helpers.dates import now
 from app.models import Question, Topic
 
@@ -107,5 +108,19 @@ class FakeQuestionRepository:
 
         for question in self._questions:
             counts[question.topic_id] = counts.get(question.topic_id, 0) + 1
+
+        return counts
+
+    async def count_by_topic_and_difficulty(
+        self,
+    ) -> dict[UUID, dict[QuestionDifficulty, int]]:
+        counts: dict[UUID, dict[QuestionDifficulty, int]] = {}
+
+        for question in self._questions:
+            topic_counts = counts.setdefault(question.topic_id, {})
+
+            topic_counts[question.difficulty] = (
+                topic_counts.get(question.difficulty, 0) + 1
+            )
 
         return counts

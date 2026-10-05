@@ -18,6 +18,15 @@ class TopicResponse(BaseModel):
     updated_at: datetime
 
 
+class TopicQuestionCountResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    easy: int
+    medium: int
+    hard: int
+    total: int
+
+
 class TopicTreeResponse(BaseModel):
     """HTTPS response representation of the tree of topics."""
 
@@ -27,5 +36,5 @@ class TopicTreeResponse(BaseModel):
     name: str
     slug: str
     description: str | None
-    question_count: int
+    question_counts: TopicQuestionCountResponse
     children: list["TopicTreeResponse"] = Field(default_factory=list)

@@ -20,7 +20,7 @@ from app.core.dto.topic import (
     TopicTreeData,
     UpdateTopicData,
 )
-from app.core.types import UNSET
+from app.core.types.common import UNSET
 
 
 def to_create_topic_data(

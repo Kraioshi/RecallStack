@@ -3,7 +3,7 @@ from uuid import UUID
 from app.core.dto.question import CreateQuestionData, QuestionData, UpdateQuestionData
 from app.core.exceptions.question import QuestionNotFoundError
 from app.core.exceptions.topic import TopicNotFoundError
-from app.core.types import is_set
+from app.core.types.common import is_set
 from app.models import Question
 from app.unit_of_work.base import UnitOfWork
 

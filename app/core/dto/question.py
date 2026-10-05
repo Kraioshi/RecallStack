@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 from app.core.enums.question import QuestionDifficulty
-from app.core.types import UNSET, _UnsetType
+from app.core.types.common import UNSET, _UnsetType
 
 
 @dataclass(frozen=True)
