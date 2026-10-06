@@ -1,7 +1,19 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.exception_handlers import register_exception_handlers
 from app.api.router import api_router
+from app.core.config import settings
+
+
+def configure_cors(application: FastAPI) -> None:
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 def create_app() -> FastAPI:
@@ -20,6 +32,8 @@ def create_app() -> FastAPI:
         title="RecallStack",
         version="0.1.0",
     )
+
+    configure_cors(app)
 
     app.include_router(
         api_router,
