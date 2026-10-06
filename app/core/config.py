@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +8,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int
+
+    CORS_ALLOWED_ORIGINS: list[str] = Field(default_factory=list)
 
     model_config = SettingsConfigDict(
         env_file=".env",
