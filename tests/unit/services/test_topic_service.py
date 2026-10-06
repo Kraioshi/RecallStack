@@ -799,3 +799,193 @@ class TestGetTree:
         result = await service.get_tree()
 
         assert result == []
+
+
+class TestGetContextTree:
+    async def test_returns_ancestor_path_and_selected_topic_descendants(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        python = make_topic(
+            name="Python",
+            slug="python",
+        )
+        fundamentals = make_topic(
+            name="Fundamentals",
+            slug="fundamentals",
+            parent_id=python.id,
+        )
+        frameworks = make_topic(
+            name="Frameworks",
+            slug="frameworks",
+            parent_id=python.id,
+        )
+        asyncio_topic = make_topic(
+            name="Asyncio",
+            slug="asyncio",
+            parent_id=python.id,
+        )
+
+        django = make_topic(
+            name="Django",
+            slug="django",
+            parent_id=frameworks.id,
+        )
+        fastapi = make_topic(
+            name="FastAPI",
+            slug="fastapi",
+            parent_id=frameworks.id,
+        )
+
+        core = make_topic(
+            name="Core Concepts",
+            slug="core-concepts",
+            parent_id=fastapi.id,
+        )
+        routing = make_topic(
+            name="Routing",
+            slug="routing",
+            parent_id=fastapi.id,
+        )
+
+        service, _ = topic_service_factory(
+            topics=[
+                python,
+                fundamentals,
+                frameworks,
+                asyncio_topic,
+                django,
+                fastapi,
+                core,
+                routing,
+            ]
+        )
+
+        result = await service.get_context_tree(fastapi.id)
+
+        zero_counts = TopicQuestionCountData(
+            easy=0,
+            medium=0,
+            hard=0,
+            total=0,
+        )
+
+        assert result == TopicTreeData(
+            id=python.id,
+            name="Python",
+            slug="python",
+            description=python.description,
+            question_counts=zero_counts,
+            children=(
+                TopicTreeData(
+                    id=frameworks.id,
+                    name="Frameworks",
+                    slug="frameworks",
+                    description=frameworks.description,
+                    question_counts=zero_counts,
+                    children=(
+                        TopicTreeData(
+                            id=fastapi.id,
+                            name="FastAPI",
+                            slug="fastapi",
+                            description=fastapi.description,
+                            question_counts=zero_counts,
+                            children=(
+                                TopicTreeData(
+                                    id=core.id,
+                                    name="Core Concepts",
+                                    slug="core-concepts",
+                                    description=core.description,
+                                    question_counts=zero_counts,
+                                ),
+                                TopicTreeData(
+                                    id=routing.id,
+                                    name="Routing",
+                                    slug="routing",
+                                    description=routing.description,
+                                    question_counts=zero_counts,
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+    async def test_returns_full_subtree_when_selected_topic_is_root(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        python = make_topic(
+            name="Python",
+            slug="python",
+        )
+        fundamentals = make_topic(
+            name="Fundamentals",
+            slug="fundamentals",
+            parent_id=python.id,
+        )
+        frameworks = make_topic(
+            name="Frameworks",
+            slug="frameworks",
+            parent_id=python.id,
+        )
+
+        service, _ = topic_service_factory(
+            topics=[
+                python,
+                fundamentals,
+                frameworks,
+            ]
+        )
+
+        result = await service.get_context_tree(python.id)
+
+        zero_counts = TopicQuestionCountData(
+            easy=0,
+            medium=0,
+            hard=0,
+            total=0,
+        )
+
+        assert result == TopicTreeData(
+            id=python.id,
+            name="Python",
+            slug="python",
+            description=python.description,
+            question_counts=zero_counts,
+            children=(
+                TopicTreeData(
+                    id=fundamentals.id,
+                    name="Fundamentals",
+                    slug="fundamentals",
+                    description=fundamentals.description,
+                    question_counts=zero_counts,
+                ),
+                TopicTreeData(
+                    id=frameworks.id,
+                    name="Frameworks",
+                    slug="frameworks",
+                    description=frameworks.description,
+                    question_counts=zero_counts,
+                ),
+            ),
+        )
+
+    async def test_raises_when_selected_topic_does_not_exist(
+        self,
+        topic_service_factory: TopicServiceFactory,
+    ) -> None:
+        python = make_topic(
+            name="Python",
+            slug="python",
+        )
+
+        service, _ = topic_service_factory(
+            topics=[python],
+        )
+
+        missing_topic_id = uuid4()
+
+        with pytest.raises(TopicNotFoundError):
+            await service.get_context_tree(missing_topic_id)
