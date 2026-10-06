@@ -93,6 +93,29 @@ async def get_topic(
 
 
 @router.get(
+    "/{topic_id}/tree",
+    response_model=TopicTreeResponse,
+    summary="Get topic context tree",
+    response_description=(
+        "The path from the root to the selected topic and its complete descendant tree."
+    ),
+    responses={
+        404: {
+            "description": "Topic not found.",
+        },
+    },
+)
+async def get_topic_context_tree(
+    topic_id: TopicIdPath,
+    service: TopicServiceDep,
+) -> TopicTreeResponse:
+    """Retrieve a topic in its hierarchy together with all descendants."""
+    tree = await service.get_context_tree(topic_id)
+
+    return topic_mapper.to_topic_tree_response(tree)
+
+
+@router.get(
     "/{topic_id}/children",
     response_model=list[TopicResponse],
     summary="List topic children",
