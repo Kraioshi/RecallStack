@@ -116,6 +116,25 @@ class TopicService:
 
             return self._tree_builder.build(topics, question_counts=counts)
 
+    async def get_context_tree(
+        self,
+        topic_id: UUID,
+    ) -> TopicTreeData:
+        async with self._uow:
+            topics = await self._uow.topics.get_all()
+            question_counts = await self._uow.questions.count_by_topic_and_difficulty()
+
+            # Skip another DB call via _get_topic_or_raise,
+            # cause all topics are already loaded.
+            if not any(topic.id == topic_id for topic in topics):
+                raise TopicNotFoundError(topic_id)
+
+            return self._tree_builder.build_context_tree(
+                topics=topics,
+                selected_topic_id=topic_id,
+                question_counts=question_counts,
+            )
+
     async def _get_topic_or_raise(
         self,
         topic_id: UUID,
