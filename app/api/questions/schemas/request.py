@@ -43,3 +43,12 @@ class UpdateQuestionRequest(BaseModel):
             raise ValueError("difficulty cannot be null")
 
         return self
+
+
+class RandomQuestionQuery(BaseModel):
+    """Query parameters for random question selection."""
+
+    exclude_id: UUID | None = None
+    difficulty: QuestionDifficulty | None = None
+    topic_id: UUID | None = None
+    include_descendants: bool = False
