@@ -1,7 +1,15 @@
 from uuid import UUID
 
-from app.core.dto.question import CreateQuestionData, QuestionData, UpdateQuestionData
-from app.core.exceptions.question import QuestionNotFoundError
+from app.core.dto.question import (
+    CreateQuestionData,
+    QuestionData,
+    RandomQuestionCriteria,
+    UpdateQuestionData,
+)
+from app.core.exceptions.question import (
+    QuestionNotFoundError,
+    RandomQuestionNotFoundError,
+)
 from app.core.exceptions.topic import TopicNotFoundError
 from app.core.types.common import is_set
 from app.models import Question
@@ -79,6 +87,32 @@ class QuestionService:
             await self._uow.questions.delete(question)
 
             await self._uow.commit()
+
+    async def get_random_question(
+        self,
+        criteria: RandomQuestionCriteria,
+    ) -> QuestionData:
+        async with self._uow as uow:
+            if criteria.topic_id is not None:
+                topic = await uow.topics.get_by_id(criteria.topic_id)
+
+                if topic is None:
+                    raise TopicNotFoundError(criteria.topic_id)
+
+            question = await uow.questions.get_random(criteria)
+
+            if question is None:
+                raise RandomQuestionNotFoundError()
+
+            return QuestionData(
+                id=question.id,
+                topic_id=question.topic_id,
+                question=question.question,
+                answer=question.answer,
+                difficulty=question.difficulty,
+                created_at=question.created_at,
+                updated_at=question.updated_at,
+            )
 
     async def _get_question_or_raise(
         self,
