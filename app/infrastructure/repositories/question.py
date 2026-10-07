@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.core.dto.question import RandomQuestionCriteria
 from app.core.enums.question import QuestionDifficulty
 from app.models import Topic
 from app.models.question import Question
@@ -93,24 +94,17 @@ class SQLAlchemyQuestionRepository:
 
         return counts
 
-    async def get_random(
-        self,
-        *,
-        exclude_id: UUID | None = None,
-        difficulty: QuestionDifficulty | None = None,
-        topic_id: UUID | None = None,
-        include_descendants: bool = False,
-    ) -> Question | None:
+    async def get_random(self, criteria: RandomQuestionCriteria) -> Question | None:
         stmt = select(Question)
 
-        if exclude_id is not None:
-            stmt = stmt.where(Question.id != exclude_id)
+        if criteria.exclude_id is not None:
+            stmt = stmt.where(Question.id != criteria.exclude_id)
 
-        if difficulty is not None:
-            stmt = stmt.where(Question.difficulty == difficulty)
+        if criteria.difficulty is not None:
+            stmt = stmt.where(Question.difficulty == criteria.difficulty)
 
-        if topic_id is not None:
-            if include_descendants:
+        if criteria.topic_id is not None:
+            if criteria.include_descendants:
                 # WITH RECURSIVE topic_tree AS (
                 #     SELECT id
                 #     FROM topics
@@ -128,7 +122,7 @@ class SQLAlchemyQuestionRepository:
                 # WHERE questions.topic_id IN (SELECT topic_id FROM topic_tree)
                 topic_tree = (
                     select(Topic.id.label("topic_id"))
-                    .where(Topic.id == topic_id)
+                    .where(Topic.id == criteria.topic_id)
                     .cte("topic_tree", recursive=True)
                 )
 
@@ -146,7 +140,7 @@ class SQLAlchemyQuestionRepository:
                     )
                 )
             else:
-                stmt = stmt.where(Question.topic_id == topic_id)
+                stmt = stmt.where(Question.topic_id == criteria.topic_id)
 
         stmt = stmt.order_by(func.random()).limit(1)
 
