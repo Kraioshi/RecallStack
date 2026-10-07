@@ -1,5 +1,6 @@
 from uuid import UUID, uuid4
 
+from app.core.dto.question import RandomQuestionCriteria
 from app.core.enums.question import QuestionDifficulty
 from app.core.helpers.dates import now
 from app.models import Question, Topic
@@ -70,6 +71,7 @@ class FakeQuestionRepository:
 
     def __init__(self, questions: list[Question] | None = None) -> None:
         self._questions = list(questions or [])
+        self.last_random_criteria: RandomQuestionCriteria | None = None
 
     async def get_by_id(self, question_id: UUID) -> Question | None:
         return next(
@@ -124,3 +126,11 @@ class FakeQuestionRepository:
             )
 
         return counts
+
+    async def get_random(
+        self,
+        criteria: RandomQuestionCriteria,
+    ) -> Question | None:
+        self.last_random_criteria = criteria
+
+        return self._questions[0] if self._questions else None

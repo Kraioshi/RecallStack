@@ -1,6 +1,7 @@
 from typing import Protocol
 from uuid import UUID
 
+from app.core.dto.question import RandomQuestionCriteria
 from app.core.enums.question import QuestionDifficulty
 from app.models.question import Question
 
@@ -30,3 +31,8 @@ class QuestionRepository(Protocol):
     async def count_by_topic_and_difficulty(
         self,
     ) -> dict[UUID, dict[QuestionDifficulty, int]]: ...
+
+    async def get_random(
+        self,
+        criteria: RandomQuestionCriteria,
+    ) -> Question | None: ...

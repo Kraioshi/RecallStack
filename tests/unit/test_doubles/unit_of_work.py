@@ -24,6 +24,10 @@ class FakeUnitOfWork:
         self.topics: TopicRepository = topics
         self.questions: QuestionRepository = questions
 
+        # keep fake references for assertions
+        self.fake_topics: FakeTopicRepository = topics
+        self.fake_questions: FakeQuestionRepository = questions
+
         self.committed = False
         self.rolled_back = False
         self.entered = False

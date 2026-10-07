@@ -2,9 +2,17 @@ from uuid import uuid4
 
 import pytest
 
-from app.core.dto.question import CreateQuestionData, QuestionData, UpdateQuestionData
+from app.core.dto.question import (
+    CreateQuestionData,
+    QuestionData,
+    RandomQuestionCriteria,
+    UpdateQuestionData,
+)
 from app.core.enums.question import QuestionDifficulty
-from app.core.exceptions.question import QuestionNotFoundError
+from app.core.exceptions.question import (
+    QuestionNotFoundError,
+    RandomQuestionNotFoundError,
+)
 from app.core.exceptions.topic import TopicNotFoundError
 from app.core.helpers.dates import now
 from app.models import Question
@@ -453,3 +461,119 @@ class TestDeleteQuestion:
         # Assert
         assert uow.committed is False
         assert uow.rolled_back is True
+
+
+class TestGetRandomQuestion:
+    async def test_returns_random_question(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        question = make_question()
+
+        service, uow = question_service_factory(
+            questions=[question],
+        )
+
+        criteria = RandomQuestionCriteria()
+
+        # Act
+        result = await service.get_random_question(criteria)
+
+        # Assert
+        assert isinstance(result, QuestionData)
+        assert result.id == question.id
+        assert result.topic_id == question.topic_id
+        assert result.question == question.question
+        assert result.answer == question.answer
+        assert result.difficulty == question.difficulty
+
+        assert uow.entered is True
+        assert uow.exited is True
+
+    async def test_passes_selection_criteria_to_repository(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        topic = make_topic()
+        question = make_question(topic_id=topic.id)
+        excluded_question_id = uuid4()
+
+        service, uow = question_service_factory(
+            topics=[topic],
+            questions=[question],
+        )
+
+        criteria = RandomQuestionCriteria(
+            topic_id=topic.id,
+            difficulty=QuestionDifficulty.HARD,
+            include_descendants=True,
+            exclude_id=excluded_question_id,
+        )
+
+        # Act
+        await service.get_random_question(criteria)
+
+        # Assert
+        assert uow.fake_questions.last_random_criteria == criteria
+
+    async def test_raises_when_no_question_matches_criteria(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        service, uow = question_service_factory()
+
+        criteria = RandomQuestionCriteria(
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        # Act / Assert
+        with pytest.raises(RandomQuestionNotFoundError):
+            await service.get_random_question(criteria)
+
+        assert uow.entered is True
+        assert uow.exited is True
+        assert uow.rolled_back is True
+
+    async def test_raises_when_topic_does_not_exist(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        topic_id = uuid4()
+
+        service, uow = question_service_factory()
+
+        criteria = RandomQuestionCriteria(
+            topic_id=topic_id,
+            include_descendants=True,
+        )
+
+        # Act / Assert
+        with pytest.raises(TopicNotFoundError) as exc_info:
+            await service.get_random_question(criteria)
+
+        assert exc_info.value.topic_id == topic_id
+        assert uow.rolled_back is True
+
+    async def test_does_not_query_questions_when_topic_does_not_exist(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        topic_id = uuid4()
+
+        service, uow = question_service_factory()
+
+        criteria = RandomQuestionCriteria(
+            topic_id=topic_id,
+        )
+
+        # Act
+        with pytest.raises(TopicNotFoundError):
+            await service.get_random_question(criteria)
+
+        # Assert
+        assert uow.fake_questions.last_random_criteria is None
