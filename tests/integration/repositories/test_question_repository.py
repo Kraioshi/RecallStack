@@ -220,3 +220,431 @@ class TestCountByTopic:
         result = await question_repository.count_by_topic()
 
         assert result == {}
+
+
+class TestGetRandom:
+    async def test_returns_existing_question(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        first_question = await question_factory(
+            topic=topic,
+            question="What is the GIL?",
+            answer="Global Interpreter Lock.",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        second_question = await question_factory(
+            topic=topic,
+            question="What is a decorator?",
+            answer="A callable that modifies another callable.",
+            difficulty=QuestionDifficulty.EASY,
+        )
+
+        result = await question_repository.get_random()
+
+        assert result is not None
+        assert result.id in {
+            first_question.id,
+            second_question.id,
+        }
+
+    async def test_returns_none_when_no_questions_exist(
+        self,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        result = await question_repository.get_random()
+
+        assert result is None
+
+    async def test_excludes_requested_question(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        excluded_question = await question_factory(
+            topic=topic,
+            question="What is the GIL?",
+            answer="Global Interpreter Lock.",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        expected_question = await question_factory(
+            topic=topic,
+            question="What is a decorator?",
+            answer="...",
+            difficulty=QuestionDifficulty.EASY,
+        )
+
+        result = await question_repository.get_random(
+            exclude_id=excluded_question.id,
+        )
+
+        assert result is not None
+        assert result.id == expected_question.id
+
+    async def test_returns_none_when_only_question_is_excluded(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        question = await question_factory(
+            topic=topic,
+            question="What is the GIL?",
+            answer="Global Interpreter Lock.",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        result = await question_repository.get_random(
+            exclude_id=question.id,
+        )
+
+        assert result is None
+
+    async def test_returns_question_with_requested_difficulty(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        hard_question = await question_factory(
+            topic=topic,
+            question="Explain Python's descriptor protocol.",
+            answer="...",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        await question_factory(
+            topic=topic,
+            question="What is a list?",
+            answer="...",
+            difficulty=QuestionDifficulty.EASY,
+        )
+
+        result = await question_repository.get_random(
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        assert result is not None
+        assert result.id == hard_question.id
+        assert result.difficulty == QuestionDifficulty.HARD
+
+    async def test_returns_none_when_no_question_matches_difficulty(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        await question_factory(
+            topic=topic,
+            question="What is a list?",
+            answer="...",
+            difficulty=QuestionDifficulty.EASY,
+        )
+
+        result = await question_repository.get_random(
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        assert result is None
+
+    async def test_combines_difficulty_and_exclusion(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        excluded = await question_factory(
+            topic=topic,
+            question="Hard question one",
+            answer="...",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        expected = await question_factory(
+            topic=topic,
+            question="Hard question two",
+            answer="...",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        await question_factory(
+            topic=topic,
+            question="Easy question",
+            answer="...",
+            difficulty=QuestionDifficulty.EASY,
+        )
+
+        result = await question_repository.get_random(
+            exclude_id=excluded.id,
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        assert result is not None
+        assert result.id == expected.id
+
+    async def test_returns_question_from_requested_topic(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        python = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+        sql = await topic_factory(
+            name="SQL",
+            slug="sql",
+        )
+
+        expected = await question_factory(
+            topic=python,
+            question="What is the GIL?",
+            answer="Global Interpreter Lock.",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        await question_factory(
+            topic=sql,
+            question="What is a JOIN?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        result = await question_repository.get_random(
+            topic_id=python.id,
+        )
+
+        assert result is not None
+        assert result.id == expected.id
+
+    async def test_returns_none_when_topic_has_no_questions(
+        self,
+        topic_factory: TopicFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        result = await question_repository.get_random(
+            topic_id=topic.id,
+        )
+
+        assert result is None
+
+    async def test_combines_topic_and_difficulty(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        python = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+        sql = await topic_factory(
+            name="SQL",
+            slug="sql",
+        )
+
+        expected = await question_factory(
+            topic=python,
+            question="Explain descriptors.",
+            answer="...",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        await question_factory(
+            topic=python,
+            question="What is a list?",
+            answer="...",
+            difficulty=QuestionDifficulty.EASY,
+        )
+
+        await question_factory(
+            topic=sql,
+            question="Explain query planning.",
+            answer="...",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        result = await question_repository.get_random(
+            topic_id=python.id,
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        assert result is not None
+        assert result.id == expected.id
+
+    async def test_does_not_include_descendants_by_default(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        python = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        fastapi = await topic_factory(
+            name="FastAPI",
+            slug="fastapi",
+            parent=python,
+        )
+
+        await question_factory(
+            topic=fastapi,
+            question="What is dependency injection?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        result = await question_repository.get_random(
+            topic_id=python.id,
+        )
+
+        assert result is None
+
+    async def test_includes_all_descendants_when_requested(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        python = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        frameworks = await topic_factory(
+            name="Frameworks",
+            slug="frameworks",
+            parent=python,
+        )
+
+        fastapi = await topic_factory(
+            name="FastAPI",
+            slug="fastapi",
+            parent=frameworks,
+        )
+
+        expected = await question_factory(
+            topic=fastapi,
+            question="What is dependency injection?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        sql = await topic_factory(
+            name="SQL",
+            slug="sql",
+        )
+
+        await question_factory(
+            topic=sql,
+            question="What is a JOIN?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        result = await question_repository.get_random(
+            topic_id=python.id,
+            include_descendants=True,
+        )
+
+        assert result is not None
+        assert result.id == expected.id
+
+    async def test_combines_descendants_and_difficulty(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        python = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+        frameworks = await topic_factory(
+            name="Frameworks",
+            slug="frameworks",
+            parent=python,
+        )
+        fastapi = await topic_factory(
+            name="FastAPI",
+            slug="fastapi",
+            parent=frameworks,
+        )
+
+        expected = await question_factory(
+            topic=fastapi,
+            question="Explain FastAPI dependency injection.",
+            answer="...",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        await question_factory(
+            topic=fastapi,
+            question="What is a path parameter?",
+            answer="...",
+            difficulty=QuestionDifficulty.EASY,
+        )
+
+        sql = await topic_factory(
+            name="SQL",
+            slug="sql",
+        )
+
+        await question_factory(
+            topic=sql,
+            question="Explain query planning.",
+            answer="...",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        result = await question_repository.get_random(
+            topic_id=python.id,
+            include_descendants=True,
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        assert result is not None
+        assert result.id == expected.id
