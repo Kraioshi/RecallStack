@@ -1,7 +1,10 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from app.core.exceptions.question import QuestionNotFoundError
+from app.core.exceptions.question import (
+    QuestionNotFoundError,
+    RandomQuestionNotFoundError,
+)
 from app.core.exceptions.topic import TopicHasChildrenError, TopicNotFoundError
 
 
@@ -51,7 +54,24 @@ async def handle_question_not_found(
     )
 
 
+async def handle_random_question_not_found(
+    _request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """Translate RandomQuestionNotFoundError into an HTTP 404 response."""
+
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={
+            "detail": str(exc),
+        },
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(TopicNotFoundError, handle_topic_not_found)
     app.add_exception_handler(TopicHasChildrenError, handle_topic_has_children)
     app.add_exception_handler(QuestionNotFoundError, handle_question_not_found)
+    app.add_exception_handler(
+        RandomQuestionNotFoundError, handle_random_question_not_found
+    )
