@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dto.question import RandomQuestionCriteria
 from app.core.enums.question import QuestionDifficulty
 from app.infrastructure.repositories.question import SQLAlchemyQuestionRepository
 from app.models import Question
@@ -248,7 +249,7 @@ class TestGetRandom:
             difficulty=QuestionDifficulty.EASY,
         )
 
-        result = await question_repository.get_random()
+        result = await question_repository.get_random(RandomQuestionCriteria())
 
         assert result is not None
         assert result.id in {
@@ -260,7 +261,7 @@ class TestGetRandom:
         self,
         question_repository: SQLAlchemyQuestionRepository,
     ) -> None:
-        result = await question_repository.get_random()
+        result = await question_repository.get_random(RandomQuestionCriteria())
 
         assert result is None
 
@@ -290,7 +291,9 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            exclude_id=excluded_question.id,
+            RandomQuestionCriteria(
+                exclude_id=excluded_question.id,
+            )
         )
 
         assert result is not None
@@ -315,7 +318,9 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            exclude_id=question.id,
+            RandomQuestionCriteria(
+                exclude_id=question.id,
+            )
         )
 
         assert result is None
@@ -346,7 +351,9 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            difficulty=QuestionDifficulty.HARD,
+            RandomQuestionCriteria(
+                difficulty=QuestionDifficulty.HARD,
+            )
         )
 
         assert result is not None
@@ -372,7 +379,9 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            difficulty=QuestionDifficulty.HARD,
+            RandomQuestionCriteria(
+                difficulty=QuestionDifficulty.HARD,
+            )
         )
 
         assert result is None
@@ -410,8 +419,10 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            exclude_id=excluded.id,
-            difficulty=QuestionDifficulty.HARD,
+            RandomQuestionCriteria(
+                exclude_id=excluded.id,
+                difficulty=QuestionDifficulty.HARD,
+            )
         )
 
         assert result is not None
@@ -447,7 +458,9 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            topic_id=python.id,
+            RandomQuestionCriteria(
+                topic_id=python.id,
+            )
         )
 
         assert result is not None
@@ -464,7 +477,9 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            topic_id=topic.id,
+            RandomQuestionCriteria(
+                topic_id=topic.id,
+            )
         )
 
         assert result is None
@@ -506,8 +521,10 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            topic_id=python.id,
-            difficulty=QuestionDifficulty.HARD,
+            RandomQuestionCriteria(
+                topic_id=python.id,
+                difficulty=QuestionDifficulty.HARD,
+            )
         )
 
         assert result is not None
@@ -538,7 +555,9 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            topic_id=python.id,
+            RandomQuestionCriteria(
+                topic_id=python.id,
+            )
         )
 
         assert result is None
@@ -586,8 +605,10 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            topic_id=python.id,
-            include_descendants=True,
+            RandomQuestionCriteria(
+                topic_id=python.id,
+                include_descendants=True,
+            )
         )
 
         assert result is not None
@@ -641,9 +662,11 @@ class TestGetRandom:
         )
 
         result = await question_repository.get_random(
-            topic_id=python.id,
-            include_descendants=True,
-            difficulty=QuestionDifficulty.HARD,
+            RandomQuestionCriteria(
+                topic_id=python.id,
+                include_descendants=True,
+                difficulty=QuestionDifficulty.HARD,
+            )
         )
 
         assert result is not None

@@ -31,3 +31,13 @@ class QuestionData:
     difficulty: QuestionDifficulty
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True)
+class RandomQuestionCriteria:
+    """Defines optional criteria for random question selection."""
+
+    exclude_id: UUID | None = None
+    difficulty: QuestionDifficulty | None = None
+    topic_id: UUID | None = None
+    include_descendants: bool = False
