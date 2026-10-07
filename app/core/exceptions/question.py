@@ -11,3 +11,6 @@ class QuestionNotFoundError(Exception):
 
 class RandomQuestionNotFoundError(Exception):
     """Raised when no question matches the random selection criteria."""
+
+    def __init__(self) -> None:
+        super().__init__("No question matches the requested criteria.")
