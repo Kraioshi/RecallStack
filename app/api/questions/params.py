@@ -5,6 +5,8 @@ from uuid import UUID
 
 from fastapi import Path, Query
 
+from app.api.questions.schemas.request import RandomQuestionQuery
+
 type QuestionIdPath = Annotated[
     UUID,
     Path(
@@ -18,4 +20,10 @@ type TopicIdQuery = Annotated[
     Query(
         description="Return questions belonging to this topic.",
     ),
+]
+
+
+type RandomQuestionQueryParams = Annotated[
+    RandomQuestionQuery,
+    Query(),
 ]

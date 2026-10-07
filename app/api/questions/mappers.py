@@ -6,12 +6,14 @@ Functions translate between HTTP-facing Pydantic schemas and application DTOs.
 
 from app.api.questions.schemas.request import (
     CreateQuestionRequest,
+    RandomQuestionQuery,
     UpdateQuestionRequest,
 )
 from app.api.questions.schemas.response import QuestionResponse
 from app.core.dto.question import (
     CreateQuestionData,
     QuestionData,
+    RandomQuestionCriteria,
     UpdateQuestionData,
 )
 from app.core.types.common import UNSET
@@ -56,4 +58,15 @@ def to_update_question_data(
         question=request.question if request.question is not None else UNSET,
         answer=request.answer if request.answer is not None else UNSET,
         difficulty=request.difficulty if request.difficulty is not None else UNSET,
+    )
+
+
+def to_random_question_criteria(
+    query: RandomQuestionQuery,
+) -> RandomQuestionCriteria:
+    return RandomQuestionCriteria(
+        exclude_id=query.exclude_id,
+        difficulty=query.difficulty,
+        topic_id=query.topic_id,
+        include_descendants=query.include_descendants,
     )

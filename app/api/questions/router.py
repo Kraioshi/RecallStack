@@ -2,7 +2,11 @@ from fastapi import APIRouter, status
 
 from app.api.dependencies.services import QuestionServiceDep
 from app.api.questions import mappers as question_mapper
-from app.api.questions.params import QuestionIdPath, TopicIdQuery
+from app.api.questions.params import (
+    QuestionIdPath,
+    RandomQuestionQueryParams,
+    TopicIdQuery,
+)
 from app.api.questions.schemas.request import (
     CreateQuestionRequest,
     UpdateQuestionRequest,
@@ -13,6 +17,30 @@ router = APIRouter(
     prefix="/questions",
     tags=["questions"],
 )
+
+
+@router.get(
+    "/random",
+    response_model=QuestionResponse,
+    summary="Get a random question",
+    response_description="A random question matching the requested criteria.",
+    responses={
+        404: {
+            "description": "Topic not found or no question matches the criteria.",
+        },
+    },
+)
+async def get_random_question(
+    service: QuestionServiceDep,
+    query: RandomQuestionQueryParams,
+) -> QuestionResponse:
+    """Retrieve a random question matching optional selection criteria."""
+
+    criteria = question_mapper.to_random_question_criteria(query)
+
+    question = await service.get_random_question(criteria)
+
+    return question_mapper.to_question_response(question)
 
 
 @router.get(
