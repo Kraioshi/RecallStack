@@ -34,6 +34,31 @@ class SQLAlchemyQuestionRepository:
 
         return list(result.scalars().all())
 
+    async def get_by_text(
+        self, topic_id: UUID, question: str, exclude_id: UUID | None = None
+    ) -> Question | None:
+        """
+        Comparison is case-insensitive and ignores leading/trailing spaces.
+        Optionally exclude a question by ID (useful when updating questions).
+
+        SELECT * FROM questions
+        WHERE topic_id = :topic_id
+            AND lower(btrim(question)) = lower(btrim(:question))
+        LIMIT 1;
+        """
+        normalized_column = func.lower(func.btrim(Question.question))
+        normalized_value = func.lower(func.btrim(question))
+
+        stmt = select(Question).where(
+            Question.topic_id == topic_id,
+            normalized_column.bool_op("=")(normalized_value),
+        )
+        if exclude_id is not None:
+            stmt = stmt.where(Question.id != exclude_id)
+
+        result = await self._session.execute(stmt.limit(1))
+        return result.scalar_one_or_none()
+
     async def add(self, question: Question) -> Question:
         self._session.add(question)
         await self._session.flush()

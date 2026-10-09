@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.core.exceptions.question import (
+    QuestionAlreadyExistsError,
     QuestionNotFoundError,
     RandomQuestionNotFoundError,
 )
@@ -68,10 +69,24 @@ async def handle_random_question_not_found(
     )
 
 
+async def handle_question_already_exists(
+    _request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """Translate question uniqueness errors into HTTP 409."""
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(TopicNotFoundError, handle_topic_not_found)
     app.add_exception_handler(TopicHasChildrenError, handle_topic_has_children)
     app.add_exception_handler(QuestionNotFoundError, handle_question_not_found)
+    app.add_exception_handler(
+        QuestionAlreadyExistsError, handle_question_already_exists
+    )
     app.add_exception_handler(
         RandomQuestionNotFoundError, handle_random_question_not_found
     )

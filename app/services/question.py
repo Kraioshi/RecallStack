@@ -7,6 +7,7 @@ from app.core.dto.question import (
     UpdateQuestionData,
 )
 from app.core.exceptions.question import (
+    QuestionAlreadyExistsError,
     QuestionNotFoundError,
     RandomQuestionNotFoundError,
 )
@@ -46,10 +47,11 @@ class QuestionService:
         self,
         data: CreateQuestionData,
     ) -> QuestionData:
-        """Create a question after validating its topic."""
+        """Create a question after validating its topic and uniqueness."""
 
         async with self._uow:
             await self._ensure_topic_exists(data.topic_id)
+            await self._ensure_question_is_unique(data.topic_id, data.question)
 
             entity = self._to_question_model(data)
             created = await self._uow.questions.add(entity)
@@ -71,6 +73,20 @@ class QuestionService:
             topic_id = data.topic_id
             if is_set(topic_id) and topic_id != question.topic_id:
                 await self._ensure_topic_exists(topic_id)
+
+            if is_set(data.topic_id) or is_set(data.question):
+                next_topic_id = (
+                    data.topic_id if is_set(data.topic_id) else question.topic_id
+                )
+                next_text = (
+                    data.question if is_set(data.question) else question.question
+                )
+
+                await self._ensure_question_is_unique(
+                    next_topic_id,
+                    next_text,
+                    exclude_id=question.id,
+                )
 
             self._apply_updates(question, data)
 
@@ -113,6 +129,15 @@ class QuestionService:
                 created_at=question.created_at,
                 updated_at=question.updated_at,
             )
+
+    async def _ensure_question_is_unique(
+        self, topic_id: UUID, question_text: str, exclude_id: UUID | None = None
+    ) -> None:
+        existing = await self._uow.questions.get_by_text(
+            topic_id, question_text, exclude_id=exclude_id
+        )
+        if existing is not None:
+            raise QuestionAlreadyExistsError(topic_id, question_text)
 
     async def _get_question_or_raise(
         self,
