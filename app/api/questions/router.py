@@ -94,9 +94,8 @@ async def list_questions_by_topic(
     summary="Create a question",
     response_description="The newly created question.",
     responses={
-        404: {
-            "description": "Topic not found.",
-        },
+        404: {"description": "Topic not found."},
+        409: {"description": "Question already exists in this topic."},
     },
 )
 async def create_question(
@@ -116,9 +115,8 @@ async def create_question(
     summary="Update a question",
     response_description="The updated question.",
     responses={
-        404: {
-            "description": "Question or destination topic not found.",
-        },
+        404: {"description": "Question or destination topic not found."},
+        409: {"description": "Question already exists in the destination topic."},
     },
 )
 async def update_question(

@@ -9,6 +9,15 @@ class QuestionNotFoundError(Exception):
         super().__init__(f"Question '{question_id}' was not found.")
 
 
+class QuestionAlreadyExistsError(Exception):
+    """Raised when a topic already contains this question text."""
+
+    def __init__(self, topic_id: UUID, question: str) -> None:
+        self.topic_id = topic_id
+        self.question = question
+        super().__init__(f"Question '{question}' already exists in topic '{topic_id}'.")
+
+
 class RandomQuestionNotFoundError(Exception):
     """Raised when no question matches the random selection criteria."""
 
