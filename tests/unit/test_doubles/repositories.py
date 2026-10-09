@@ -79,6 +79,25 @@ class FakeQuestionRepository:
             None,
         )
 
+    async def get_by_text(
+        self,
+        topic_id: UUID,
+        question: str,
+        exclude_id: UUID | None = None,
+    ) -> Question | None:
+        normalized_text = question.strip(" ").lower()
+
+        return next(
+            (
+                item
+                for item in self._questions
+                if item.topic_id == topic_id
+                and item.question.strip(" ").lower() == normalized_text
+                and item.id != exclude_id
+            ),
+            None,
+        )
+
     async def get_by_topic_id(self, topic_id: UUID) -> list[Question]:
         return [
             question for question in self._questions if question.topic_id == topic_id
