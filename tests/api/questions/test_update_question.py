@@ -272,3 +272,80 @@ async def test_returns_422_when_question_id_is_invalid(
 
     # Assert
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+async def test_returns_409_when_updating_to_duplicate_text(
+    api_client: AsyncClient,
+    question_service_override: QuestionServiceOverride,
+) -> None:
+    # Arrange
+    topic = make_topic()
+
+    existing = make_question(
+        topic_id=topic.id,
+        question="What is the GIL?",
+    )
+
+    updated = make_question(
+        topic_id=topic.id,
+        question="What is asyncio?",
+    )
+
+    question_service_override(
+        topics=[topic],
+        questions=[existing, updated],
+    )
+
+    payload = {
+        "question": "What is the GIL?",
+    }
+
+    # Act
+    response = await api_client.patch(
+        f"/api/questions/{updated.id}",
+        json=payload,
+    )
+
+    # Assert
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "already exists" in response.json()["detail"]
+    assert updated.question == "What is asyncio?"
+
+
+async def test_returns_409_when_moving_to_topic_with_duplicate(
+    api_client: AsyncClient,
+    question_service_override: QuestionServiceOverride,
+) -> None:
+    # Arrange
+    python = make_topic(name="Python", slug="python")
+    sql = make_topic(name="SQL", slug="sql")
+
+    moving = make_question(
+        topic_id=python.id,
+        question="What is an iterator?",
+    )
+
+    existing = make_question(
+        topic_id=sql.id,
+        question="What is an iterator?",
+    )
+
+    question_service_override(
+        topics=[python, sql],
+        questions=[moving, existing],
+    )
+
+    payload = {
+        "topic_id": str(sql.id),
+    }
+
+    # Act
+    response = await api_client.patch(
+        f"/api/questions/{moving.id}",
+        json=payload,
+    )
+
+    # Assert
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "already exists" in response.json()["detail"]
+    assert moving.topic_id == python.id

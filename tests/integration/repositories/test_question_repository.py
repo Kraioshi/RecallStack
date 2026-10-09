@@ -1,5 +1,7 @@
 from uuid import uuid4
 
+import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dto.question import RandomQuestionCriteria
@@ -671,3 +673,127 @@ class TestGetRandom:
 
         assert result is not None
         assert result.id == expected.id
+
+
+class TestGetByText:
+    async def test_returns_question_with_normalized_text(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        # Arrange
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        existing = await question_factory(
+            topic=topic,
+            question="What is the GIL?",
+            answer="Global Interpreter Lock.",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        # Act
+        result = await question_repository.get_by_text(
+            topic_id=topic.id,
+            question="  WHAT IS THE GIL?  ",
+        )
+
+        # Assert
+        assert result is not None
+        assert result.id == existing.id
+
+    async def test_returns_none_when_question_is_in_different_topic(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        # Arrange
+        python = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+        sql = await topic_factory(
+            name="SQL",
+            slug="sql",
+        )
+
+        await question_factory(
+            topic=python,
+            question="What is concurrency?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        # Act
+        result = await question_repository.get_by_text(
+            topic_id=sql.id,
+            question="What is concurrency?",
+        )
+
+        # Assert
+        assert result is None
+
+    async def test_excludes_question_by_id(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        # Arrange
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        existing = await question_factory(
+            topic=topic,
+            question="What is the GIL?",
+            answer="...",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        # Act
+        result = await question_repository.get_by_text(
+            topic_id=topic.id,
+            question="What is the GIL?",
+            exclude_id=existing.id,
+        )
+
+        # Assert
+        assert result is None
+
+
+class TestQuestionUniquenessConstraint:
+    async def test_database_rejects_duplicate_question(
+        self,
+        topic_factory: TopicFactory,
+        question_factory: QuestionFactory,
+        question_repository: SQLAlchemyQuestionRepository,
+    ) -> None:
+        # Arrange
+        topic = await topic_factory(
+            name="Python",
+            slug="python",
+        )
+
+        await question_factory(
+            topic=topic,
+            question="What is the GIL?",
+            answer="Global Interpreter Lock.",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        duplicate = Question(
+            topic_id=topic.id,
+            question="  WHAT IS THE GIL?  ",
+            answer="Another explanation.",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        # Act / Assert
+        with pytest.raises(IntegrityError):
+            await question_repository.add(duplicate)

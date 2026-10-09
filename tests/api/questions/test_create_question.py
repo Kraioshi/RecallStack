@@ -4,7 +4,7 @@ from fastapi import status
 from httpx import AsyncClient
 
 from tests.api.types import QuestionServiceOverride
-from tests.unit.factories import make_topic
+from tests.unit.factories import make_question, make_topic
 
 
 async def test_creates_question(
@@ -206,3 +206,38 @@ async def test_returns_422_when_required_field_is_missing(
 
     # Assert
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+async def test_returns_409_when_question_already_exists(
+    api_client: AsyncClient,
+    question_service_override: QuestionServiceOverride,
+) -> None:
+    # Arrange
+    topic = make_topic()
+
+    existing = make_question(
+        topic_id=topic.id,
+        question="What is the GIL?",
+    )
+
+    question_service_override(
+        topics=[topic],
+        questions=[existing],
+    )
+
+    payload = {
+        "topic_id": str(topic.id),
+        "question": "what is the gil?",
+        "answer": "Another explanation.",
+        "difficulty": "hard",
+    }
+
+    # Act
+    response = await api_client.post(
+        "/api/questions",
+        json=payload,
+    )
+
+    # Assert
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "already exists" in response.json()["detail"]

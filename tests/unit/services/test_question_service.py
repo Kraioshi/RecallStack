@@ -10,6 +10,7 @@ from app.core.dto.question import (
 )
 from app.core.enums.question import QuestionDifficulty
 from app.core.exceptions.question import (
+    QuestionAlreadyExistsError,
     QuestionNotFoundError,
     RandomQuestionNotFoundError,
 )
@@ -250,6 +251,77 @@ class TestCreateQuestion:
         assert uow.committed is False
         assert uow.rolled_back is True
 
+    async def test_rejects_duplicate_question_in_same_topic(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        topic = make_topic()
+
+        existing = make_question(
+            topic_id=topic.id,
+            question="What is the GIL?",
+        )
+
+        service, uow = question_service_factory(
+            topics=[topic],
+            questions=[existing],
+        )
+
+        data = CreateQuestionData(
+            topic_id=topic.id,
+            question="  WHAT IS THE GIL?  ",
+            answer="Another explanation.",
+            difficulty=QuestionDifficulty.HARD,
+        )
+
+        # Act / Assert
+        with pytest.raises(QuestionAlreadyExistsError):
+            await service.create_question(data)
+
+        assert uow.committed is False
+        assert uow.rolled_back is True
+
+        questions = await uow.questions.get_by_topic_id(topic.id)
+        assert len(questions) == 1
+        assert questions[0].id == existing.id
+
+    async def test_allows_same_question_in_different_topics(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        python = make_topic(name="Python", slug="python")
+        sql = make_topic(name="SQL", slug="sql")
+
+        existing = make_question(
+            topic_id=python.id,
+            question="What is concurrency?",
+        )
+
+        service, uow = question_service_factory(
+            topics=[python, sql],
+            questions=[existing],
+        )
+
+        data = CreateQuestionData(
+            topic_id=sql.id,
+            question="What is concurrency?",
+            answer="Another explanation.",
+            difficulty=QuestionDifficulty.MEDIUM,
+        )
+
+        # Act
+        result = await service.create_question(data)
+
+        # Assert
+        assert result.topic_id == sql.id
+        assert result.question == existing.question
+        assert uow.committed is True
+
+        questions = await uow.questions.get_by_topic_id(sql.id)
+        assert len(questions) == 1
+
 
 class TestUpdateQuestion:
     async def test_updates_question_fields(
@@ -391,6 +463,133 @@ class TestUpdateQuestion:
         # Assert
         assert uow.committed is False
         assert uow.rolled_back is True
+
+    async def test_rejects_duplicate_question_text_on_update(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        topic = make_topic()
+
+        existing = make_question(
+            topic_id=topic.id,
+            question="What is the GIL?",
+        )
+
+        updated = make_question(
+            topic_id=topic.id,
+            question="What is asyncio?",
+        )
+
+        service, uow = question_service_factory(
+            topics=[topic],
+            questions=[existing, updated],
+        )
+
+        data = UpdateQuestionData(
+            question="what is the gil?",
+        )
+
+        # Act / Assert
+        with pytest.raises(QuestionAlreadyExistsError):
+            await service.update_question(updated.id, data)
+
+        assert updated.question == "What is asyncio?"
+        assert uow.committed is False
+        assert uow.rolled_back is True
+
+    async def test_rejects_move_when_destination_has_duplicate(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        python = make_topic(name="Python", slug="python")
+        sql = make_topic(name="SQL", slug="sql")
+
+        moving = make_question(
+            topic_id=python.id,
+            question="What is an iterator?",
+        )
+
+        existing = make_question(
+            topic_id=sql.id,
+            question="What is an iterator?",
+        )
+
+        service, uow = question_service_factory(
+            topics=[python, sql],
+            questions=[moving, existing],
+        )
+
+        data = UpdateQuestionData(topic_id=sql.id)
+
+        # Act / Assert
+        with pytest.raises(QuestionAlreadyExistsError):
+            await service.update_question(moving.id, data)
+
+        assert moving.topic_id == python.id
+        assert uow.committed is False
+        assert uow.rolled_back is True
+
+    async def test_allows_updating_own_question_text(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        topic = make_topic()
+
+        question = make_question(
+            topic_id=topic.id,
+            question="What is the GIL?",
+        )
+
+        service, uow = question_service_factory(
+            topics=[topic],
+            questions=[question],
+        )
+
+        data = UpdateQuestionData(
+            question="  WHAT IS THE GIL?  ",
+            answer="Updated explanation.",
+        )
+
+        # Act
+        result = await service.update_question(question.id, data)
+
+        # Assert
+        assert result.id == question.id
+        assert result.question == "  WHAT IS THE GIL?  "
+        assert result.answer == "Updated explanation."
+        assert uow.committed is True
+
+    async def test_allows_updating_only_answer_without_conflict(
+        self,
+        question_service_factory: QuestionServiceFactory,
+    ) -> None:
+        # Arrange
+        topic = make_topic()
+
+        question = make_question(
+            topic_id=topic.id,
+            question="What is the GIL?",
+        )
+
+        service, uow = question_service_factory(
+            topics=[topic],
+            questions=[question],
+        )
+
+        data = UpdateQuestionData(
+            answer="A new and better explanation.",
+        )
+
+        # Act
+        result = await service.update_question(question.id, data)
+
+        # Assert
+        assert result.question == "What is the GIL?"
+        assert result.answer == "A new and better explanation."
+        assert uow.committed is True
 
 
 class TestDeleteQuestion:
