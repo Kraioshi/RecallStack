@@ -6,7 +6,11 @@ from app.core.exceptions.question import (
     QuestionNotFoundError,
     RandomQuestionNotFoundError,
 )
-from app.core.exceptions.topic import TopicHasChildrenError, TopicNotFoundError
+from app.core.exceptions.topic import (
+    TopicHasChildrenError,
+    TopicNotFoundError,
+    TopicSlugAlreadyExistsError,
+)
 
 
 async def handle_topic_not_found(
@@ -38,6 +42,17 @@ async def handle_topic_has_children(
         content={
             "detail": str(exc),
         },
+    )
+
+
+async def handle_topic_slug_already_exists(
+    _request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """Translate sibling topic slug conflicts into HTTP 409."""
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exc)},
     )
 
 
@@ -83,6 +98,10 @@ async def handle_question_already_exists(
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(TopicNotFoundError, handle_topic_not_found)
     app.add_exception_handler(TopicHasChildrenError, handle_topic_has_children)
+    app.add_exception_handler(
+        TopicSlugAlreadyExistsError,
+        handle_topic_slug_already_exists,
+    )
     app.add_exception_handler(QuestionNotFoundError, handle_question_not_found)
     app.add_exception_handler(
         QuestionAlreadyExistsError, handle_question_already_exists
